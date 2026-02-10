@@ -38,20 +38,23 @@ function updateAuthStatus(message, isError = false) {
 function setAuthUI(session) {
   const signedIn = Boolean(session?.user);
   const banner = $("#auth-banner");
+  const loginScreen = $("#login-screen");
+  const appShell = $("#app-shell");
   const signOut = $("#auth-signout");
-  const form = $("#auth-form");
 
   if (signedIn) {
     const email = session.user.email || "Signed in";
     updateAuthStatus(email);
     signOut.classList.remove("is-hidden");
-    form.classList.add("is-hidden");
     banner.classList.add("is-hidden");
+    loginScreen.classList.add("is-hidden");
+    appShell.classList.remove("is-hidden");
   } else {
     updateAuthStatus("Not signed in");
     signOut.classList.add("is-hidden");
-    form.classList.remove("is-hidden");
     banner.classList.remove("is-hidden");
+    loginScreen.classList.remove("is-hidden");
+    appShell.classList.add("is-hidden");
   }
 
   setFormsEnabled(signedIn);
@@ -366,4 +369,265 @@ function renderGroceries() {
             ? `<button data-action="toggle" data-id="${item.id}" data-collection="groceries">${
                 item.completed ? "Undo" : "Done"
               }</button>
-        <button data-action="remove" data
+        <button data-action="remove" data-id="${item.id}" data-collection="groceries">Remove</button>`
+            : ""
+        }
+      </div>
+    `;
+    list.appendChild(li);
+  });
+}
+
+function renderTodos() {
+  const list = $("#todo-list");
+  list.innerHTML = "";
+
+  state.data.todos.forEach((item) => {
+    const canEdit = state.user && (item.created_by === state.user.id || isAdmin());
+    const li = document.createElement("li");
+    li.className = `check-item${item.completed ? " completed" : ""}`;
+    li.innerHTML = `
+      <div>
+        <strong>${item.title}</strong>
+        <div class="panel-sub">${item.owner || "Unassigned"}</div>
+      </div>
+      <div>
+        ${
+          canEdit
+            ? `<button data-action="toggle" data-id="${item.id}" data-collection="todos">${
+                item.completed ? "Undo" : "Done"
+              }</button>
+        <button data-action="remove" data-id="${item.id}" data-collection="todos">Remove</button>`
+            : ""
+        }
+      </div>
+    `;
+    list.appendChild(li);
+  });
+}
+
+function showMessage(selector, message, isError = false) {
+  const element = $(selector);
+  element.textContent = message;
+  element.style.color = isError ? "var(--danger)" : "var(--muted)";
+  setTimeout(() => {
+    element.textContent = "";
+  }, 2800);
+}
+
+function handleListActions(event) {
+  const button = event.target.closest("button");
+  if (!button) return;
+  const { action, id, collection } = button.dataset;
+  if (!action || !id || !collection) return;
+
+  if (action === "toggle") {
+    toggleItem(collection, id);
+  }
+
+  if (action === "remove") {
+    removeItem(collection, id);
+  }
+}
+
+function handleReservationActions(event) {
+  const button = event.target.closest("button");
+  if (!button) return;
+  const { action, id } = button.dataset;
+  if (action !== "edit" || !id) return;
+
+  const reservation = state.data.reservations.find((entry) => entry.id === id);
+  if (!reservation) return;
+
+  if (!state.user || (reservation.created_by !== state.user.id && !isAdmin())) return;
+
+  const form = $("#reservation-form");
+  form.name.value = reservation.name;
+  form.start.value = reservation.start_date;
+  form.end.value = reservation.end_date;
+  form.rooms.value = reservation.rooms;
+  form.guests.value = reservation.guests || "";
+  setReservationFormMode(id);
+}
+
+function setReservationFormMode(id) {
+  state.editingReservationId = id;
+  const submit = $("#reservation-submit");
+  const cancel = $("#reservation-cancel");
+
+  if (id) {
+    submit.textContent = "Update reservation";
+    cancel.classList.remove("is-hidden");
+  } else {
+    submit.textContent = "Reserve stay";
+    cancel.classList.add("is-hidden");
+  }
+}
+
+function handleNav(event) {
+  const button = event.target.closest(".nav-item");
+  if (!button) return;
+  const page = button.dataset.page;
+  if (!page) return;
+
+  $$(".nav-item").forEach((item) => item.classList.remove("active"));
+  button.classList.add("active");
+
+  $$(".page").forEach((section) => section.classList.remove("active"));
+  $("#page-" + page).classList.add("active");
+}
+
+async function updateSettings(event) {
+  event.preventDefault();
+  if (!state.user || !isAdmin()) return;
+  const form = event.target;
+  const data = Object.fromEntries(new FormData(form));
+  const { error } = await supabaseClient
+    .from("settings")
+    .update({ total_rooms: Number(data.totalRooms), updated_by: state.user.id })
+    .eq("id", 1);
+  if (error) {
+    showMessage("#settings-message", error.message, true);
+    return;
+  }
+  await refreshData();
+  showMessage("#settings-message", "Settings saved.");
+}
+
+async function fetchProfile(user) {
+  if (!user) return null;
+  const { data, error } = await supabaseClient
+    .from("profiles")
+    .select("id, email, role")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (error) return null;
+  return data;
+}
+
+async function ensureProfile(user) {
+  if (!user) return;
+  await supabaseClient.from("profiles").upsert({ id: user.id, email: user.email });
+}
+
+async function refreshData() {
+  if (!state.user) return;
+
+  const [settingsResult, reservationsResult, groceriesResult, todosResult] = await Promise.all([
+    supabaseClient.from("settings").select("*").eq("id", 1).single(),
+    supabaseClient.from("reservations").select("*").order("start_date", { ascending: true }),
+    supabaseClient.from("groceries").select("*").order("created_at", { ascending: false }),
+    supabaseClient.from("todos").select("*").order("created_at", { ascending: false }),
+  ]);
+
+  if (!settingsResult.error && settingsResult.data) {
+    state.data.settings.totalRooms = settingsResult.data.total_rooms;
+    const settingsInput = $("#settings-form [name=totalRooms]");
+    settingsInput.value = state.data.settings.totalRooms;
+  }
+
+  state.data.reservations = reservationsResult.data || [];
+  state.data.groceries = groceriesResult.data || [];
+  state.data.todos = todosResult.data || [];
+
+  buildCalendar();
+  renderSelectedDay();
+  renderGroceries();
+  renderTodos();
+}
+
+async function handleAuthForm(event) {
+  event.preventDefault();
+  if (!supabaseClient) return;
+  const email = $("#auth-email").value.trim();
+  if (!email) return;
+  const { error } = await supabaseClient.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: window.location.origin,
+    },
+  });
+  if (error) {
+    updateAuthStatus(error.message, true);
+  } else {
+    updateAuthStatus("Magic link sent.");
+  }
+}
+
+async function handleSignOut() {
+  if (!supabaseClient) return;
+  await supabaseClient.auth.signOut();
+}
+
+async function init() {
+  supabaseClient = initSupabase();
+  if (!supabaseClient) return;
+
+  $("#auth-form").addEventListener("submit", handleAuthForm);
+  $("#auth-signout").addEventListener("click", handleSignOut);
+
+  supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+    state.user = session?.user || null;
+    setAuthUI(session);
+
+    if (state.user) {
+      await ensureProfile(state.user);
+      state.profile = await fetchProfile(state.user);
+      await refreshData();
+      setFormsEnabled(true);
+    } else {
+      state.profile = null;
+      state.data.reservations = [];
+      state.data.groceries = [];
+      state.data.todos = [];
+      buildCalendar();
+      renderSelectedDay();
+      renderGroceries();
+      renderTodos();
+    }
+  });
+
+  const { data } = await supabaseClient.auth.getSession();
+  state.user = data.session?.user || null;
+  if (state.user) {
+    await ensureProfile(state.user);
+    state.profile = await fetchProfile(state.user);
+  }
+
+  setAuthUI(data.session);
+  state.selectedDate = new Date();
+  setReservationFormMode(null);
+
+  if (state.user) {
+    await refreshData();
+  } else {
+    buildCalendar();
+    renderSelectedDay();
+  }
+
+  $("#reservation-form").addEventListener("submit", addReservation);
+  $("#reservation-cancel").addEventListener("click", () => {
+    $("#reservation-form").reset();
+    setReservationFormMode(null);
+  });
+  $("#grocery-form").addEventListener("submit", addGrocery);
+  $("#todo-form").addEventListener("submit", addTodo);
+  $("#grocery-list").addEventListener("click", handleListActions);
+  $("#todo-list").addEventListener("click", handleListActions);
+  $("#settings-form").addEventListener("submit", updateSettings);
+  $(".nav").addEventListener("click", handleNav);
+  $("#day-reservations").addEventListener("click", handleReservationActions);
+
+  $("#prev-month").addEventListener("click", () => {
+    state.currentDate = new Date(state.currentDate.getFullYear(), state.currentDate.getMonth() - 1, 1);
+    buildCalendar();
+  });
+
+  $("#next-month").addEventListener("click", () => {
+    state.currentDate = new Date(state.currentDate.getFullYear(), state.currentDate.getMonth() + 1, 1);
+    buildCalendar();
+  });
+}
+
+init();

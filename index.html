@@ -7,7 +7,25 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <div class="app">
+    <section id="login-screen" class="login-screen">
+      <div class="login-card">
+        <div class="login-brand">
+          <div class="logo">HH</div>
+          <div>
+            <h1>Suncadia House</h1>
+            <p>Sign in to manage reservations.</p>
+          </div>
+        </div>
+        <form id="auth-form" class="auth-form">
+          <input type="email" id="auth-email" placeholder="Email for magic link" required />
+          <button type="submit" class="primary">Send magic link</button>
+        </form>
+        <div class="auth-hint">We will email you a secure sign-in link.</div>
+        <div class="auth-status" id="auth-status">Not signed in</div>
+      </div>
+    </section>
+
+    <div class="app is-hidden" id="app-shell">
       <aside class="sidebar">
         <div class="brand">
           <div class="logo">HH</div>
@@ -23,18 +41,7 @@
         </nav>
         <div class="sidebar-footer">
           <div class="auth-card">
-            <div class="auth-status" id="auth-status">Not signed in</div>
-            <form id="auth-form" class="auth-form">
-              <input
-                type="email"
-                id="auth-email"
-                placeholder="Email for magic link"
-                required
-              />
-              <button type="submit" class="primary">Send magic link</button>
-            </form>
             <button id="auth-signout" class="ghost is-hidden" type="button">Sign out</button>
-            <div class="auth-hint">We will email you a secure sign-in link.</div>
           </div>
           <div class="tip">
             <strong>Tip</strong>
@@ -141,4 +148,53 @@
                 <h3>Groceries</h3>
                 <span class="panel-sub">Shared shopping list</span>
               </div>
-              <form id="grocery-form" clas
+              <form id="grocery-form" class="form inline-form">
+                <input name="item" placeholder="Fresh bread" required />
+                <input name="who" placeholder="Owner" />
+                <button type="submit" class="primary">Add</button>
+              </form>
+              <ul id="grocery-list" class="checklist"></ul>
+            </div>
+
+            <div class="panel-card">
+              <div class="panel-header">
+                <h3>To-Dos</h3>
+                <span class="panel-sub">Who is responsible</span>
+              </div>
+              <form id="todo-form" class="form inline-form">
+                <input name="task" placeholder="Clean grill" required />
+                <input name="owner" placeholder="Owner" />
+                <button type="submit" class="primary">Add</button>
+              </form>
+              <ul id="todo-list" class="checklist"></ul>
+            </div>
+          </div>
+        </section>
+
+        <section id="page-settings" class="page">
+          <header class="page-header">
+            <div>
+              <h2>Settings</h2>
+              <p>Define how many rooms are available.</p>
+            </div>
+          </header>
+
+          <div class="panel-card settings-card">
+            <form id="settings-form" class="form">
+              <label>
+                Total rooms in the house
+                <input type="number" name="totalRooms" min="1" value="4" required />
+              </label>
+              <button type="submit" class="primary">Save settings</button>
+              <div id="settings-message" class="form-message"></div>
+            </form>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
