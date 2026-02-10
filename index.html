@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Suncadia House Planner</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="logo">HH</div>
+          <div>
+            <h1>Suncadia House</h1>
+            <p>Shared vacation planning</p>
+          </div>
+        </div>
+        <nav class="nav">
+          <button class="nav-item active" data-page="calendar">Calendar</button>
+          <button class="nav-item" data-page="lists">Lists</button>
+          <button class="nav-item" data-page="settings">Settings</button>
+        </nav>
+        <div class="sidebar-footer">
+          <div class="auth-card">
+            <div class="auth-status" id="auth-status">Not signed in</div>
+            <form id="auth-form" class="auth-form">
+              <input
+                type="email"
+                id="auth-email"
+                placeholder="Email for magic link"
+                required
+              />
+              <button type="submit" class="primary">Send magic link</button>
+            </form>
+            <button id="auth-signout" class="ghost is-hidden" type="button">Sign out</button>
+            <div class="auth-hint">We will email you a secure sign-in link.</div>
+          </div>
+          <div class="tip">
+            <strong>Tip</strong>
+            <span>Click a day to see who is there.</span>
+          </div>
+        </div>
+      </aside>
+
+      <main class="content">
+        <div id="auth-banner" class="auth-banner is-hidden">
+          Please sign in to view and edit reservations.
+        </div>
+        <section id="page-calendar" class="page active">
+          <header class="page-header">
+            <div>
+              <h2>Reservations</h2>
+              <p>See availability, invite friends, and plan stays.</p>
+            </div>
+            <div class="month-controls">
+              <button id="prev-month" class="ghost">Previous</button>
+              <div id="month-label" class="month-label"></div>
+              <button id="next-month" class="ghost">Next</button>
+            </div>
+          </header>
+
+          <div class="calendar-layout">
+            <div class="calendar-card">
+              <div class="weekdays">
+                <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+              </div>
+              <div id="calendar-grid" class="calendar-grid"></div>
+            </div>
+
+            <div class="side-panel">
+              <div class="panel-card detail-panel">
+                <div class="panel-header">
+                  <div class="panel-date" id="selected-date">Pick a date</div>
+                  <div class="panel-range" id="availability"></div>
+                </div>
+
+                <div class="panel-tabs">
+                  <button class="tab is-active" type="button">Details</button>
+                  <button class="tab" type="button">Guests</button>
+                  <button class="tab" type="button">Notes</button>
+                </div>
+
+                <div class="panel-content">
+                  <div class="panel-section">
+                    <h3>Who's staying</h3>
+                    <ul id="day-reservations" class="reservation-list"></ul>
+                  </div>
+
+                  <div class="panel-section">
+                    <h3>Create reservation</h3>
+                    <form id="reservation-form" class="form">
+                      <label>
+                        Primary name
+                        <input name="name" placeholder="Alex" required />
+                      </label>
+                      <div class="form-row">
+                        <label>
+                          Start date
+                          <input type="date" name="start" required />
+                        </label>
+                        <label>
+                          End date
+                          <input type="date" name="end" required />
+                        </label>
+                      </div>
+                      <div class="form-row">
+                        <label>
+                          Rooms needed
+                          <input type="number" name="rooms" min="1" value="1" required />
+                        </label>
+                        <label>
+                          Invitees
+                          <input name="guests" placeholder="Jamie, Morgan" />
+                        </label>
+                      </div>
+                      <div class="form-actions">
+                        <button type="submit" class="primary" id="reservation-submit">Reserve stay</button>
+                        <button type="button" class="ghost is-hidden" id="reservation-cancel">Cancel edit</button>
+                      </div>
+                      <div id="reservation-message" class="form-message"></div>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="page-lists" class="page">
+          <header class="page-header">
+            <div>
+              <h2>Lists</h2>
+              <p>Groceries, supplies, and tasks with owners.</p>
+            </div>
+          </header>
+
+          <div class="lists-grid">
+            <div class="panel-card">
+              <div class="panel-header">
+                <h3>Groceries</h3>
+                <span class="panel-sub">Shared shopping list</span>
+              </div>
+              <form id="grocery-form" clas
