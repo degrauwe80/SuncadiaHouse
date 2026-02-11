@@ -163,6 +163,27 @@ input {
   gap: 8px;
 }
 
+.auth-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.auth-tab {
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.auth-tab.is-active {
+  border-color: var(--primary);
+  color: var(--ink);
+}
+
 .auth-form input {
   border-radius: 6px;
   border: 1px solid var(--border);
@@ -385,6 +406,15 @@ input {
   gap: 18px;
 }
 
+.tab-panel {
+  display: none;
+  gap: 18px;
+}
+
+.tab-panel.is-active {
+  display: grid;
+}
+
 .panel-section {
   display: grid;
   gap: 10px;
@@ -402,180 +432,3 @@ input {
   border-radius: 6px;
   padding: 10px 12px;
   background: var(--bg-hover);
-  display: grid;
-  gap: 6px;
-}
-
-.reservation-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-
-.form {
-  display: grid;
-  gap: 12px;
-}
-
-.form-actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.is-hidden {
-  display: none !important;
-}
-
-.form label {
-  display: grid;
-  gap: 6px;
-  font-size: 0.9rem;
-  color: var(--muted);
-}
-
-.form input {
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  padding: 10px 12px;
-  background: var(--bg);
-}
-
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
-.primary {
-  border: none;
-  border-radius: 6px;
-  background: var(--primary);
-  color: #fff;
-  padding: 12px 18px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.form-message {
-  font-size: 0.85rem;
-  color: var(--muted);
-}
-
-.lists-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 24px;
-}
-
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.panel-sub {
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
-.inline-form {
-  grid-template-columns: 1.3fr 0.8fr auto;
-  align-items: center;
-}
-
-.inline-form input {
-  width: 100%;
-}
-
-.checklist {
-  list-style: none;
-  padding: 0;
-  margin: 16px 0 0;
-  display: grid;
-  gap: 10px;
-}
-
-.check-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 12px;
-  background: var(--bg-accent);
-  border-radius: 6px;
-  border: 1px solid var(--border);
-}
-
-.check-item.completed {
-  opacity: 0.5;
-  text-decoration: line-through;
-}
-
-.check-item button {
-  background: transparent;
-  border: none;
-  color: var(--danger);
-  cursor: pointer;
-}
-
-.settings-card {
-  max-width: 420px;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@media (max-width: 960px) {
-  .app {
-    grid-template-columns: 1fr;
-  }
-
-  .sidebar {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-
-  .nav {
-    grid-auto-flow: column;
-    gap: 8px;
-  }
-
-  .content {
-    padding: 24px;
-  }
-
-  .calendar-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 720px) {
-  .page-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-
-  .inline-form {
-    grid-template-columns: 1fr;
-  }
-
-  .sidebar {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}

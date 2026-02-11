@@ -9,9 +9,14 @@ let supabaseClient = null;
 const state = {
   currentDate: new Date(),
   selectedDate: null,
+  selectedReservationId: null,
   editingReservationId: null,
+  activePanel: "details",
+  authMode: "magic",
   user: null,
   profile: null,
+  reservationGuests: [],
+  reservationNotes: [],
   data: {
     settings: { totalRooms: 4 },
     reservations: [],
@@ -63,12 +68,15 @@ function setAuthUI(session) {
 function setFormsEnabled(enabled) {
   const forms = [
     "#reservation-form",
+    "#guest-form",
+    "#note-form",
     "#grocery-form",
     "#todo-form",
     "#settings-form",
   ];
   forms.forEach((selector) => {
     const form = $(selector);
+    if (!form) return;
     form.querySelectorAll("input, button").forEach((el) => {
       if (selector === "#settings-form" && !isAdmin()) {
         el.disabled = true;
@@ -76,6 +84,11 @@ function setFormsEnabled(enabled) {
         el.disabled = !enabled;
       }
     });
+    if (selector === "#note-form") {
+      form.querySelectorAll("textarea").forEach((el) => {
+        el.disabled = !enabled;
+      });
+    }
   });
 }
 
@@ -116,6 +129,16 @@ function roomsUsedOn(date) {
 
 function reservationsOn(date) {
   return state.data.reservations.filter((reservation) => overlaps(date, reservation));
+}
+
+function getSelectedReservation() {
+  if (!state.selectedReservationId) return null;
+  return state.data.reservations.find((reservation) => reservation.id === state.selectedReservationId) || null;
+}
+
+function canEditReservation(reservation) {
+  if (!state.user || !reservation) return false;
+  return reservation.created_by === state.user.id || isAdmin();
 }
 
 function buildCalendar() {
@@ -208,6 +231,11 @@ function renderSelectedDay() {
 
   list.innerHTML = "";
   if (reservations.length === 0) {
+    state.selectedReservationId = null;
+    state.reservationGuests = [];
+    state.reservationNotes = [];
+    renderReservationGuests();
+    renderReservationNotes();
     const item = document.createElement("li");
     item.className = "reservation-card";
     item.textContent = "No reservations yet.";
@@ -215,10 +243,22 @@ function renderSelectedDay() {
     return;
   }
 
+  const hasActiveReservation = reservations.some(
+    (reservation) => reservation.id === state.selectedReservationId
+  );
+  if (!hasActiveReservation) {
+    state.selectedReservationId = reservations[0].id;
+    state.reservationGuests = [];
+    state.reservationNotes = [];
+    loadReservationExtras();
+  }
+
   reservations.forEach((reservation) => {
-    const canEdit = state.user && (reservation.created_by === state.user.id || isAdmin());
+    const canEdit = canEditReservation(reservation);
+    const isSelected = reservation.id === state.selectedReservationId;
     const item = document.createElement("li");
-    item.className = "reservation-card";
+    item.className = `reservation-card${isSelected ? " is-selected" : ""}`;
+    item.dataset.reservationId = reservation.id;
     item.innerHTML = `
       <div class="reservation-row">
         <strong>${reservation.name}</strong>
@@ -236,6 +276,150 @@ function renderSelectedDay() {
     `;
     list.appendChild(item);
   });
+
+  renderReservationGuests();
+  renderReservationNotes();
+}
+
+function setPanelTab(panelName) {
+  state.activePanel = panelName;
+  $$(".panel-tabs .tab").forEach((tab) => {
+    tab.classList.toggle("is-active", tab.dataset.panel === panelName);
+  });
+
+  $$(".tab-panel").forEach((panel) => {
+    panel.classList.toggle("is-active", panel.id === `panel-${panelName}`);
+  });
+}
+
+function renderReservationGuests() {
+  const label = $("#selected-reservation-label");
+  const list = $("#guests-list");
+  const form = $("#guest-form");
+  const selectedReservation = getSelectedReservation();
+  const canEdit = canEditReservation(selectedReservation);
+
+  label.textContent = selectedReservation
+    ? `${selectedReservation.name} (${selectedReservation.start_date} to ${selectedReservation.end_date})`
+    : "Select a reservation in Details.";
+
+  list.innerHTML = "";
+  if (!selectedReservation) {
+    const li = document.createElement("li");
+    li.className = "panel-list-item";
+    li.textContent = "No reservation selected.";
+    list.appendChild(li);
+  } else if (state.reservationGuests.length === 0) {
+    const li = document.createElement("li");
+    li.className = "panel-list-item";
+    li.textContent = "No guests added yet.";
+    list.appendChild(li);
+  } else {
+    state.reservationGuests.forEach((guest) => {
+      const canDelete = state.user && (guest.created_by === state.user.id || isAdmin());
+      const li = document.createElement("li");
+      li.className = "panel-list-item";
+      li.innerHTML = `
+        <div>
+          <strong>${guest.name}</strong>
+          <div class="panel-sub">${guest.count > 1 ? `Count: ${guest.count}` : "Count: 1"}</div>
+        </div>
+        ${
+          canDelete
+            ? `<button type="button" class="ghost" data-action="delete-guest" data-id="${guest.id}">Remove</button>`
+            : ""
+        }
+      `;
+      list.appendChild(li);
+    });
+  }
+
+  form.querySelectorAll("input, button").forEach((element) => {
+    element.disabled = !canEdit;
+  });
+}
+
+function renderReservationNotes() {
+  const label = $("#notes-reservation-label");
+  const list = $("#notes-list");
+  const form = $("#note-form");
+  const selectedReservation = getSelectedReservation();
+  const canEdit = canEditReservation(selectedReservation);
+
+  label.textContent = selectedReservation
+    ? `${selectedReservation.name} (${selectedReservation.start_date} to ${selectedReservation.end_date})`
+    : "Select a reservation in Details.";
+
+  list.innerHTML = "";
+  if (!selectedReservation) {
+    const li = document.createElement("li");
+    li.className = "panel-list-item note-item";
+    li.textContent = "No reservation selected.";
+    list.appendChild(li);
+  } else if (state.reservationNotes.length === 0) {
+    const li = document.createElement("li");
+    li.className = "panel-list-item note-item";
+    li.textContent = "No notes yet.";
+    list.appendChild(li);
+  } else {
+    state.reservationNotes.forEach((noteEntry) => {
+      const createdAt = new Date(noteEntry.created_at).toLocaleString();
+      const canDelete = state.user && (noteEntry.created_by === state.user.id || isAdmin());
+      const li = document.createElement("li");
+      li.className = "panel-list-item note-item";
+      li.innerHTML = `
+        <div class="note-content">
+          <p>${noteEntry.note}</p>
+          <div class="panel-sub">${createdAt}</div>
+        </div>
+        ${
+          canDelete
+            ? `<button type="button" class="ghost" data-action="delete-note" data-id="${noteEntry.id}">Delete</button>`
+            : ""
+        }
+      `;
+      list.appendChild(li);
+    });
+  }
+
+  form.querySelectorAll("textarea, button").forEach((element) => {
+    element.disabled = !canEdit;
+  });
+}
+
+async function loadReservationExtras() {
+  if (!state.user || !state.selectedReservationId) {
+    state.reservationGuests = [];
+    state.reservationNotes = [];
+    renderReservationGuests();
+    renderReservationNotes();
+    return;
+  }
+
+  const [guestsResult, notesResult] = await Promise.all([
+    supabaseClient
+      .from("reservation_guests")
+      .select("*")
+      .eq("reservation_id", state.selectedReservationId)
+      .order("created_at", { ascending: true }),
+    supabaseClient
+      .from("reservation_notes")
+      .select("*")
+      .eq("reservation_id", state.selectedReservationId)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  if (guestsResult.error) {
+    showMessage("#guests-message", guestsResult.error.message, true);
+  }
+  if (notesResult.error) {
+    showMessage("#notes-message", notesResult.error.message, true);
+  }
+
+  state.reservationGuests = guestsResult.data || [];
+  state.reservationNotes = notesResult.data || [];
+  renderReservationGuests();
+  renderReservationNotes();
 }
 
 async function addReservation(event) {
@@ -330,6 +514,66 @@ async function addTodo(event) {
 
   form.reset();
   await refreshData();
+}
+
+async function addGuest(event) {
+  event.preventDefault();
+  if (!state.user || !state.selectedReservationId) return;
+
+  const selectedReservation = getSelectedReservation();
+  if (!canEditReservation(selectedReservation)) {
+    showMessage("#guests-message", "You can only add guests to reservations you can edit.", true);
+    return;
+  }
+
+  const form = event.target;
+  const data = Object.fromEntries(new FormData(form));
+
+  const { error } = await supabaseClient.from("reservation_guests").insert({
+    reservation_id: state.selectedReservationId,
+    name: data.guestName.trim(),
+    count: Number(data.guestCount) || 1,
+    created_by: state.user.id,
+  });
+
+  if (error) {
+    showMessage("#guests-message", error.message, true);
+    return;
+  }
+
+  form.reset();
+  form.guestCount.value = "1";
+  showMessage("#guests-message", "Guest added.");
+  await loadReservationExtras();
+}
+
+async function addNote(event) {
+  event.preventDefault();
+  if (!state.user || !state.selectedReservationId) return;
+
+  const selectedReservation = getSelectedReservation();
+  if (!canEditReservation(selectedReservation)) {
+    showMessage("#notes-message", "You can only add notes to reservations you can edit.", true);
+    return;
+  }
+
+  const form = event.target;
+  const data = Object.fromEntries(new FormData(form));
+
+  const { error } = await supabaseClient.from("reservation_notes").insert({
+    reservation_id: state.selectedReservationId,
+    note: data.noteText.trim(),
+    created_by: state.user.id,
+  });
+
+  if (error) {
+    showMessage("#notes-message", error.message, true);
+    return;
+  }
+
+  form.reset();
+  showMessage("#notes-message", "Note added.");
+  await loadReservationExtras();
 }
 
 async function toggleItem(collection, id) {
@@ -430,24 +674,69 @@ function handleListActions(event) {
   }
 }
 
-function handleReservationActions(event) {
+async function handleReservationExtraActions(event) {
   const button = event.target.closest("button");
   if (!button) return;
   const { action, id } = button.dataset;
-  if (action !== "edit" || !id) return;
+  if (!action || !id) return;
 
-  const reservation = state.data.reservations.find((entry) => entry.id === id);
-  if (!reservation) return;
+  if (action === "delete-guest") {
+    const { error } = await supabaseClient.from("reservation_guests").delete().eq("id", id);
+    if (error) {
+      showMessage("#guests-message", error.message, true);
+      return;
+    }
+    await loadReservationExtras();
+  }
 
-  if (!state.user || (reservation.created_by !== state.user.id && !isAdmin())) return;
+  if (action === "delete-note") {
+    const { error } = await supabaseClient.from("reservation_notes").delete().eq("id", id);
+    if (error) {
+      showMessage("#notes-message", error.message, true);
+      return;
+    }
+    await loadReservationExtras();
+  }
+}
 
-  const form = $("#reservation-form");
-  form.name.value = reservation.name;
-  form.start.value = reservation.start_date;
-  form.end.value = reservation.end_date;
-  form.rooms.value = reservation.rooms;
-  form.guests.value = reservation.guests || "";
-  setReservationFormMode(id);
+async function handleReservationActions(event) {
+  const button = event.target.closest("button");
+  if (button) {
+    const { action, id } = button.dataset;
+    if (action === "edit" && id) {
+      const reservation = state.data.reservations.find((entry) => entry.id === id);
+      if (!reservation) return;
+      if (!canEditReservation(reservation)) return;
+
+      const form = $("#reservation-form");
+      form.name.value = reservation.name;
+      form.start.value = reservation.start_date;
+      form.end.value = reservation.end_date;
+      form.rooms.value = reservation.rooms;
+      form.guests.value = reservation.guests || "";
+      setReservationFormMode(id);
+      state.selectedReservationId = reservation.id;
+      await loadReservationExtras();
+      return;
+    }
+  }
+
+  const reservationItem = event.target.closest("[data-reservation-id]");
+  if (!reservationItem) return;
+  const reservationId = reservationItem.dataset.reservationId;
+  if (!reservationId || state.selectedReservationId === reservationId) return;
+
+  state.selectedReservationId = reservationId;
+  renderSelectedDay();
+  await loadReservationExtras();
+}
+
+function handlePanelTabs(event) {
+  const tab = event.target.closest(".tab");
+  if (!tab) return;
+  const panel = tab.dataset.panel;
+  if (!panel) return;
+  setPanelTab(panel);
 }
 
 function setReservationFormMode(id) {
@@ -540,7 +829,7 @@ async function refreshData() {
 async function handleAuthForm(event) {
   event.preventDefault();
   if (!supabaseClient) return;
-  const email = $("#auth-email").value.trim();
+  const email = $("#magic-email").value.trim();
   if (!email) return;
   const { error } = await supabaseClient.auth.signInWithOtp({
     email,
@@ -555,6 +844,52 @@ async function handleAuthForm(event) {
   }
 }
 
+async function handlePasswordAuthForm(event) {
+  event.preventDefault();
+  if (!supabaseClient) return;
+  const email = $("#password-email").value.trim();
+  const password = $("#password-value").value;
+  if (!email || !password) return;
+
+  const { error } = await supabaseClient.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) {
+    updateAuthStatus(error.message, true);
+  } else {
+    updateAuthStatus("Signing you in...");
+  }
+}
+
+function setAuthMode(mode) {
+  state.authMode = mode;
+  const magicForm = $("#auth-magic-form");
+  const passwordForm = $("#auth-password-form");
+  const tabs = $$(".auth-tab");
+
+  tabs.forEach((tab) => {
+    tab.classList.toggle("is-active", tab.dataset.authMode === mode);
+  });
+
+  if (mode === "password") {
+    magicForm.classList.add("is-hidden");
+    passwordForm.classList.remove("is-hidden");
+  } else {
+    passwordForm.classList.add("is-hidden");
+    magicForm.classList.remove("is-hidden");
+  }
+}
+
+function handleAuthModeSwitch(event) {
+  const button = event.target.closest(".auth-tab");
+  if (!button) return;
+  const mode = button.dataset.authMode;
+  if (!mode) return;
+  setAuthMode(mode);
+}
+
 async function handleSignOut() {
   if (!supabaseClient) return;
   await supabaseClient.auth.signOut();
@@ -564,7 +899,9 @@ async function init() {
   supabaseClient = initSupabase();
   if (!supabaseClient) return;
 
-  $("#auth-form").addEventListener("submit", handleAuthForm);
+  $("#auth-tabs").addEventListener("click", handleAuthModeSwitch);
+  $("#auth-magic-form").addEventListener("submit", handleAuthForm);
+  $("#auth-password-form").addEventListener("submit", handlePasswordAuthForm);
   $("#auth-signout").addEventListener("click", handleSignOut);
 
   supabaseClient.auth.onAuthStateChange(async (_event, session) => {
@@ -578,6 +915,9 @@ async function init() {
       setFormsEnabled(true);
     } else {
       state.profile = null;
+      state.selectedReservationId = null;
+      state.reservationGuests = [];
+      state.reservationNotes = [];
       state.data.reservations = [];
       state.data.groceries = [];
       state.data.todos = [];
@@ -596,6 +936,8 @@ async function init() {
   }
 
   setAuthUI(data.session);
+  setAuthMode("magic");
+  setPanelTab("details");
   state.selectedDate = new Date();
   setReservationFormMode(null);
 
@@ -613,10 +955,15 @@ async function init() {
   });
   $("#grocery-form").addEventListener("submit", addGrocery);
   $("#todo-form").addEventListener("submit", addTodo);
+  $("#guest-form").addEventListener("submit", addGuest);
+  $("#note-form").addEventListener("submit", addNote);
   $("#grocery-list").addEventListener("click", handleListActions);
   $("#todo-list").addEventListener("click", handleListActions);
+  $("#guests-list").addEventListener("click", handleReservationExtraActions);
+  $("#notes-list").addEventListener("click", handleReservationExtraActions);
   $("#settings-form").addEventListener("submit", updateSettings);
   $(".nav").addEventListener("click", handleNav);
+  $(".panel-tabs").addEventListener("click", handlePanelTabs);
   $("#day-reservations").addEventListener("click", handleReservationActions);
 
   $("#prev-month").addEventListener("click", () => {

@@ -16,9 +16,18 @@
             <p>Sign in to manage reservations.</p>
           </div>
         </div>
-        <form id="auth-form" class="auth-form">
-          <input type="email" id="auth-email" placeholder="Email for magic link" required />
+        <div class="auth-tabs" id="auth-tabs">
+          <button type="button" class="auth-tab is-active" data-auth-mode="magic">Magic Link</button>
+          <button type="button" class="auth-tab" data-auth-mode="password">Email &amp; Password</button>
+        </div>
+        <form id="auth-magic-form" class="auth-form">
+          <input type="email" id="magic-email" placeholder="Email for magic link" required />
           <button type="submit" class="primary">Send magic link</button>
+        </form>
+        <form id="auth-password-form" class="auth-form is-hidden">
+          <input type="email" id="password-email" placeholder="Email" required />
+          <input type="password" id="password-value" placeholder="Password" required />
+          <button type="submit" class="primary">Log in</button>
         </form>
         <div class="auth-hint">We will email you a secure sign-in link.</div>
         <div class="auth-status" id="auth-status">Not signed in</div>
@@ -83,118 +92,43 @@
                 </div>
 
                 <div class="panel-tabs">
-                  <button class="tab is-active" type="button">Details</button>
-                  <button class="tab" type="button">Guests</button>
-                  <button class="tab" type="button">Notes</button>
+                  <button class="tab is-active" data-panel="details" type="button">Details</button>
+                  <button class="tab" data-panel="guests" type="button">Guests</button>
+                  <button class="tab" data-panel="notes" type="button">Notes</button>
                 </div>
 
                 <div class="panel-content">
-                  <div class="panel-section">
-                    <h3>Who's staying</h3>
-                    <ul id="day-reservations" class="reservation-list"></ul>
-                  </div>
+                  <div class="tab-panel is-active" id="panel-details">
+                    <div class="panel-section">
+                      <h3>Who's staying</h3>
+                      <ul id="day-reservations" class="reservation-list"></ul>
+                    </div>
 
-                  <div class="panel-section">
-                    <h3>Create reservation</h3>
-                    <form id="reservation-form" class="form">
-                      <label>
-                        Primary name
-                        <input name="name" placeholder="Alex" required />
-                      </label>
-                      <div class="form-row">
+                    <div class="panel-section">
+                      <h3>Create reservation</h3>
+                      <form id="reservation-form" class="form">
                         <label>
-                          Start date
-                          <input type="date" name="start" required />
+                          Primary name
+                          <input name="name" placeholder="Alex" required />
                         </label>
-                        <label>
-                          End date
-                          <input type="date" name="end" required />
-                        </label>
-                      </div>
-                      <div class="form-row">
-                        <label>
-                          Rooms needed
-                          <input type="number" name="rooms" min="1" value="1" required />
-                        </label>
-                        <label>
-                          Invitees
-                          <input name="guests" placeholder="Jamie, Morgan" />
-                        </label>
-                      </div>
-                      <div class="form-actions">
-                        <button type="submit" class="primary" id="reservation-submit">Reserve stay</button>
-                        <button type="button" class="ghost is-hidden" id="reservation-cancel">Cancel edit</button>
-                      </div>
-                      <div id="reservation-message" class="form-message"></div>
-                    </form>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="page-lists" class="page">
-          <header class="page-header">
-            <div>
-              <h2>Lists</h2>
-              <p>Groceries, supplies, and tasks with owners.</p>
-            </div>
-          </header>
-
-          <div class="lists-grid">
-            <div class="panel-card">
-              <div class="panel-header">
-                <h3>Groceries</h3>
-                <span class="panel-sub">Shared shopping list</span>
-              </div>
-              <form id="grocery-form" class="form inline-form">
-                <input name="item" placeholder="Fresh bread" required />
-                <input name="who" placeholder="Owner" />
-                <button type="submit" class="primary">Add</button>
-              </form>
-              <ul id="grocery-list" class="checklist"></ul>
-            </div>
-
-            <div class="panel-card">
-              <div class="panel-header">
-                <h3>To-Dos</h3>
-                <span class="panel-sub">Who is responsible</span>
-              </div>
-              <form id="todo-form" class="form inline-form">
-                <input name="task" placeholder="Clean grill" required />
-                <input name="owner" placeholder="Owner" />
-                <button type="submit" class="primary">Add</button>
-              </form>
-              <ul id="todo-list" class="checklist"></ul>
-            </div>
-          </div>
-        </section>
-
-        <section id="page-settings" class="page">
-          <header class="page-header">
-            <div>
-              <h2>Settings</h2>
-              <p>Define how many rooms are available.</p>
-            </div>
-          </header>
-
-          <div class="panel-card settings-card">
-            <form id="settings-form" class="form">
-              <label>
-                Total rooms in the house
-                <input type="number" name="totalRooms" min="1" value="4" required />
-              </label>
-              <button type="submit" class="primary">Save settings</button>
-              <div id="settings-message" class="form-message"></div>
-            </form>
-          </div>
-        </section>
-      </main>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="config.js"></script>
-    <script src="app.js"></script>
-  </body>
-</html>
+                        <div class="form-row">
+                          <label>
+                            Start date
+                            <input type="date" name="start" required />
+                          </label>
+                          <label>
+                            End date
+                            <input type="date" name="end" required />
+                          </label>
+                        </div>
+                        <div class="form-row">
+                          <label>
+                            Rooms needed
+                            <input type="number" name="rooms" min="1" value="1" required />
+                          </label>
+                          <label>
+                            Invitees
+                            <input name="guests" placeholder="Jamie, Morgan" />
+                          </label>
+                        </div>
+                       

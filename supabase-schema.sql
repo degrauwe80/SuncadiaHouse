@@ -43,6 +43,23 @@ create table if not exists public.todos (
   completed boolean not null default false
 );
 
+create table if not exists public.reservation_guests (
+  id uuid primary key default gen_random_uuid(),
+  reservation_id uuid not null references public.reservations(id) on delete cascade,
+  name text not null,
+  count int not null default 1,
+  created_at timestamptz not null default now(),
+  created_by uuid not null references auth.users
+);
+
+create table if not exists public.reservation_notes (
+  id uuid primary key default gen_random_uuid(),
+  reservation_id uuid not null references public.reservations(id) on delete cascade,
+  note text not null,
+  created_at timestamptz not null default now(),
+  created_by uuid not null references auth.users
+);
+
 create or replace function public.is_admin()
 returns boolean
 language sql
@@ -61,6 +78,8 @@ alter table public.settings enable row level security;
 alter table public.reservations enable row level security;
 alter table public.groceries enable row level security;
 alter table public.todos enable row level security;
+alter table public.reservation_guests enable row level security;
+alter table public.reservation_notes enable row level security;
 
 -- Profiles policies
 create policy "Profiles: select own" on public.profiles
@@ -153,6 +172,66 @@ using (created_by = auth.uid() or public.is_admin())
 with check (created_by = auth.uid() or public.is_admin());
 
 create policy "Todos: delete owner or admin" on public.todos
+for delete
+to authenticated
+using (created_by = auth.uid() or public.is_admin());
+
+-- Reservation guests policies
+create policy "Reservation guests: select" on public.reservation_guests
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.reservations r
+    where r.id = reservation_guests.reservation_id
+  )
+);
+
+create policy "Reservation guests: insert editor or admin" on public.reservation_guests
+for insert
+to authenticated
+with check (
+  created_by = auth.uid()
+  and exists (
+    select 1
+    from public.reservations r
+    where r.id = reservation_guests.reservation_id
+      and (r.created_by = auth.uid() or public.is_admin())
+  )
+);
+
+create policy "Reservation guests: delete owner or admin" on public.reservation_guests
+for delete
+to authenticated
+using (created_by = auth.uid() or public.is_admin());
+
+-- Reservation notes policies
+create policy "Reservation notes: select" on public.reservation_notes
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.reservations r
+    where r.id = reservation_notes.reservation_id
+  )
+);
+
+create policy "Reservation notes: insert editor or admin" on public.reservation_notes
+for insert
+to authenticated
+with check (
+  created_by = auth.uid()
+  and exists (
+    select 1
+    from public.reservations r
+    where r.id = reservation_notes.reservation_id
+      and (r.created_by = auth.uid() or public.is_admin())
+  )
+);
+
+create policy "Reservation notes: delete owner or admin" on public.reservation_notes
 for delete
 to authenticated
 using (created_by = auth.uid() or public.is_admin());
