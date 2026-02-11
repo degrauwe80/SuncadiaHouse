@@ -131,4 +131,119 @@
                             <input name="guests" placeholder="Jamie, Morgan" />
                           </label>
                         </div>
-                       
+                        <div class="form-actions">
+                          <button type="submit" class="primary" id="reservation-submit">Reserve stay</button>
+                          <button type="button" class="ghost is-hidden" id="reservation-cancel">Cancel edit</button>
+                        </div>
+                        <div id="reservation-message" class="form-message"></div>
+                      </form>
+                    </div>
+                  </div>
+
+                  <div class="tab-panel" id="panel-guests">
+                    <div class="panel-section">
+                      <h3>Guests</h3>
+                      <div id="selected-reservation-label" class="panel-sub">Select a reservation in Details.</div>
+                      <ul id="guests-list" class="panel-list"></ul>
+                      <form id="guest-form" class="form">
+                        <div class="form-row">
+                          <label>
+                            Guest name
+                            <input name="guestName" placeholder="Taylor" required />
+                          </label>
+                          <label>
+                            Count
+                            <input name="guestCount" type="number" min="1" value="1" />
+                          </label>
+                        </div>
+                        <button type="submit" class="primary">Add guest</button>
+                        <div id="guests-message" class="form-message"></div>
+                      </form>
+                    </div>
+                  </div>
+
+                  <div class="tab-panel" id="panel-notes">
+                    <div class="panel-section">
+                      <h3>Notes</h3>
+                      <div id="notes-reservation-label" class="panel-sub">Select a reservation in Details.</div>
+                      <form id="note-form" class="form">
+                        <label>
+                          Add a note
+                          <textarea name="noteText" rows="4" placeholder="Parking info, arrival details, reminders..." required></textarea>
+                        </label>
+                        <button type="submit" class="primary">Add note</button>
+                        <div id="notes-message" class="form-message"></div>
+                      </form>
+                      <ul id="notes-list" class="panel-list"></ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="page-lists" class="page">
+          <header class="page-header">
+            <div>
+              <h2>Lists</h2>
+              <p>Groceries, supplies, and tasks with owners.</p>
+            </div>
+          </header>
+
+          <div class="lists-grid">
+            <div class="panel-card">
+              <div class="panel-header">
+                <h3>Groceries</h3>
+                <span class="panel-sub">Shared shopping list</span>
+              </div>
+              <form id="grocery-form" class="form inline-form">
+                <input name="item" placeholder="Fresh bread" required />
+                <input name="who" placeholder="Owner" />
+                <button type="submit" class="primary">Add</button>
+              </form>
+              <ul id="grocery-list" class="checklist"></ul>
+            </div>
+
+            <div class="panel-card">
+              <div class="panel-header">
+                <h3>To-Dos</h3>
+                <span class="panel-sub">Who is responsible</span>
+              </div>
+              <form id="todo-form" class="form inline-form">
+                <input name="task" placeholder="Clean grill" required />
+                <input name="owner" placeholder="Owner" />
+                <button type="submit" class="primary">Add</button>
+              </form>
+              <ul id="todo-list" class="checklist"></ul>
+            </div>
+          </div>
+        </section>
+
+        <section id="page-settings" class="page">
+          <header class="page-header">
+            <div>
+              <h2>Settings</h2>
+              <p>Define how many rooms are available.</p>
+            </div>
+          </header>
+
+          <div class="panel-card settings-card">
+            <form id="settings-form" class="form">
+              <label>
+                Total rooms in the house
+                <input type="number" name="totalRooms" min="1" value="4" required />
+              </label>
+              <button type="submit" class="primary">Save settings</button>
+              <div id="settings-message" class="form-message"></div>
+            </form>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
