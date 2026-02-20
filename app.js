@@ -6,6 +6,16 @@ const SUPABASE_ANON_KEY = window.SUPABASE_ANON_KEY || "";
 
 let supabaseClient = null;
 
+function logSupabaseConfigDebug() {
+  const hasUrl = Boolean(window.SUPABASE_URL);
+  const hasAnonKey = Boolean(window.SUPABASE_ANON_KEY);
+  console.log("[Auth Debug] SUPABASE_URL present:", hasUrl);
+  console.log("[Auth Debug] SUPABASE_ANON_KEY present:", hasAnonKey);
+  if (!hasUrl || !hasAnonKey) {
+    console.warn("[Auth Debug] Missing Supabase globals. Check config.js load order and values.");
+  }
+}
+
 const state = {
   currentDate: new Date(),
   selectedDate: null,
@@ -980,11 +990,34 @@ async function handleSignUp(event) {
     return;
   }
 
-  const { error } = await supabaseClient.auth.signUp({ email, password });
-  if (error) {
-    updateAuthStatus(error.message, true);
+  const { data, error } = await supabaseClient.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: window.location.origin,
+    },
+  });
+
+  if (error || !data?.user) {
+    const message = error?.message || "Signup failed. Please try again.";
+    console.error("[Auth Debug] signUp failed:", error || data);
+    if (message.toLowerCase().includes("email signups are disabled")) {
+      updateAuthStatus("Email/password signup is disabled in Supabase Auth settings.", true);
+    } else {
+      updateAuthStatus(message, true);
+    }
+    return;
+  }
+
+  console.log("[Auth Debug] signUp success:", {
+    userId: data.user.id,
+    hasSession: Boolean(data.session),
+  });
+
+  if (data.session) {
+    updateAuthStatus("Account created. Signing you in...");
   } else {
-    updateAuthStatus("Account created. You can now sign in.");
+    updateAuthStatus("Check your email to confirm, then sign in.");
     setAuthView("signin");
   }
 }
@@ -1038,6 +1071,7 @@ function clearSignedOutState() {
 }
 
 async function init() {
+  logSupabaseConfigDebug();
   supabaseClient = initSupabase();
   if (!supabaseClient) return;
 
