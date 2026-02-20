@@ -60,6 +60,21 @@ create table if not exists public.reservation_notes (
   created_by uuid not null references auth.users
 );
 
+create table if not exists public.invites (
+  id uuid primary key default gen_random_uuid(),
+  reservation_id uuid not null references public.reservations(id) on delete cascade,
+  created_by uuid not null references auth.users,
+  created_at timestamptz not null default now(),
+  message text
+);
+
+create table if not exists public.invite_dismissals (
+  invite_id uuid not null references public.invites(id) on delete cascade,
+  user_id uuid not null references auth.users on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (invite_id, user_id)
+);
+
 create or replace function public.is_admin()
 returns boolean
 language sql
@@ -80,6 +95,8 @@ alter table public.groceries enable row level security;
 alter table public.todos enable row level security;
 alter table public.reservation_guests enable row level security;
 alter table public.reservation_notes enable row level security;
+alter table public.invites enable row level security;
+alter table public.invite_dismissals enable row level security;
 
 -- Profiles policies
 create policy "Profiles: select own" on public.profiles
@@ -235,6 +252,36 @@ create policy "Reservation notes: delete owner or admin" on public.reservation_n
 for delete
 to authenticated
 using (created_by = auth.uid() or public.is_admin());
+
+-- Invites policies
+create policy "Invites: select" on public.invites
+for select
+to authenticated
+using (true);
+
+create policy "Invites: insert reservation owner or admin" on public.invites
+for insert
+to authenticated
+with check (
+  created_by = auth.uid()
+  and exists (
+    select 1
+    from public.reservations r
+    where r.id = invites.reservation_id
+      and (r.created_by = auth.uid() or public.is_admin())
+  )
+);
+
+-- Invite dismissals policies
+create policy "Invite dismissals: select own" on public.invite_dismissals
+for select
+to authenticated
+using (user_id = auth.uid());
+
+create policy "Invite dismissals: insert own" on public.invite_dismissals
+for insert
+to authenticated
+with check (user_id = auth.uid());
 
 -- seed settings row if missing
 insert into public.settings (id, total_rooms)
