@@ -12,8 +12,6 @@
   --primary: #0f766e;
   --danger: #c04b3e;
   --card: #ffffff;
-  --shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
-  --radius: 6px;
 }
 
 * {
@@ -40,7 +38,8 @@ p {
 }
 
 button,
-input {
+input,
+textarea {
   font-family: inherit;
   font-size: 0.95rem;
 }
@@ -127,14 +126,14 @@ input {
 .nav-item.active {
   background: var(--primary);
   color: #fff;
-  box-shadow: none;
 }
 
 .sidebar-footer {
   margin-top: auto;
 }
 
-.tip {
+.tip,
+.auth-card {
   background: var(--bg-subtle);
   border-radius: 10px;
   padding: 14px;
@@ -144,12 +143,6 @@ input {
 }
 
 .auth-card {
-  background: var(--bg-subtle);
-  border-radius: 10px;
-  padding: 14px;
-  display: grid;
-  gap: 10px;
-  border: 1px solid var(--border);
   margin-bottom: 16px;
 }
 
@@ -184,16 +177,17 @@ input {
   color: var(--ink);
 }
 
-.auth-form input {
+.auth-form input,
+.form input,
+.form textarea {
   border-radius: 6px;
   border: 1px solid var(--border);
   padding: 10px 12px;
   background: var(--bg);
 }
 
-.auth-hint {
-  font-size: 0.75rem;
-  color: var(--muted);
+.form textarea {
+  resize: vertical;
 }
 
 .auth-banner {
@@ -211,7 +205,7 @@ input {
 
 .page {
   display: none;
-  animation: fadeIn 0.4s ease;
+  animation: fadeIn 0.25s ease;
 }
 
 .page.active {
@@ -240,12 +234,20 @@ input {
   font-weight: 600;
 }
 
-.ghost {
+.ghost,
+.link-button {
   background: transparent;
   border: 1px solid var(--border);
   padding: 8px 12px;
   border-radius: 8px;
   cursor: pointer;
+}
+
+.link-button {
+  border: none;
+  padding: 0;
+  color: var(--primary);
+  text-align: left;
 }
 
 .calendar-layout {
@@ -260,7 +262,6 @@ input {
   border-radius: 8px;
   padding: 18px;
   border: 1px solid var(--border);
-  box-shadow: none;
 }
 
 .weekdays {
@@ -289,7 +290,6 @@ input {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  position: relative;
   transition: background 150ms ease, border 150ms ease, box-shadow 150ms ease;
 }
 
@@ -309,11 +309,6 @@ input {
 .calendar-day .date-number {
   font-weight: 700;
   font-size: 1rem;
-}
-
-.day-availability {
-  font-size: 0.75rem;
-  color: var(--muted);
 }
 
 .cell-indicator {
@@ -420,7 +415,9 @@ input {
   gap: 10px;
 }
 
-.reservation-list {
+.reservation-list,
+.panel-list,
+.checklist {
   list-style: none;
   padding: 0;
   margin: 0;
@@ -428,14 +425,19 @@ input {
   gap: 10px;
 }
 
-.reservation-card {
+.reservation-card,
+.panel-list-item,
+.check-item {
   border-radius: 6px;
   padding: 10px 12px;
-  background: var(--bg-hover);
+  background: var(--bg-accent);
+  border: 1px solid var(--border);
+}
+
+.reservation-card {
   display: grid;
   gap: 6px;
   cursor: pointer;
-  border: 1px solid transparent;
 }
 
 .reservation-card.is-selected {
@@ -443,26 +445,33 @@ input {
   box-shadow: 0 0 0 2px rgba(15, 118, 110, 0.12);
 }
 
-.reservation-row {
+.reservation-row,
+.check-item,
+.panel-list-item {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
+}
+
+.note-item {
+  display: grid;
+  grid-template-columns: 1fr auto;
+}
+
+.note-content {
+  display: grid;
+  gap: 6px;
+}
+
+.invite-actions {
+  display: grid;
+  gap: 6px;
 }
 
 .form {
   display: grid;
   gap: 12px;
-}
-
-.form-actions {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-
-.is-hidden {
-  display: none !important;
 }
 
 .form label {
@@ -472,25 +481,23 @@ input {
   color: var(--muted);
 }
 
-.form input {
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  padding: 10px 12px;
-  background: var(--bg);
-}
-
-.form textarea {
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  padding: 10px 12px;
-  background: var(--bg);
-  resize: vertical;
+.inline-check {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink) !important;
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 
 .primary {
@@ -503,7 +510,8 @@ input {
   font-weight: 600;
 }
 
-.form-message {
+.form-message,
+.panel-sub {
   font-size: 0.85rem;
   color: var(--muted);
 }
@@ -514,18 +522,6 @@ input {
   gap: 24px;
 }
 
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 10px;
-}
-
-.panel-sub {
-  font-size: 0.8rem;
-  color: var(--muted);
-}
-
 .inline-form {
   grid-template-columns: 1.3fr 0.8fr auto;
   align-items: center;
@@ -533,24 +529,6 @@ input {
 
 .inline-form input {
   width: 100%;
-}
-
-.checklist {
-  list-style: none;
-  padding: 0;
-  margin: 16px 0 0;
-  display: grid;
-  gap: 10px;
-}
-
-.check-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 12px;
-  background: var(--bg-accent);
-  border-radius: 6px;
-  border: 1px solid var(--border);
 }
 
 .check-item.completed {
@@ -569,33 +547,8 @@ input {
   max-width: 420px;
 }
 
-.panel-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: 10px;
-}
-
-.panel-list-item {
-  border-radius: 6px;
-  padding: 10px 12px;
-  background: var(--bg-accent);
-  border: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  align-items: flex-start;
-}
-
-.note-item {
-  display: grid;
-  grid-template-columns: 1fr auto;
-}
-
-.note-content {
-  display: grid;
-  gap: 6px;
+.is-hidden {
+  display: none !important;
 }
 
 @keyframes fadeIn {
@@ -640,11 +593,9 @@ input {
     align-items: flex-start;
   }
 
-  .form-row {
-    grid-template-columns: 1fr;
-  }
-
-  .inline-form {
+  .form-row,
+  .inline-form,
+  .note-item {
     grid-template-columns: 1fr;
   }
 
