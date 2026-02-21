@@ -8,6 +8,7 @@ const TOTAL_ROOMS_DEFAULT = 5;
 
 let supabaseClient = null;
 let pendingJoinInvite = null;
+let pendingJoinRequestReservation = null;
 
 const state = {
   currentDate: new Date(),
@@ -21,6 +22,9 @@ const state = {
   reservationGuests: [],
   reservationNotes: [],
   invites: [],
+  joinRequests: [],    // pending join requests for the selected reservation (owner view)
+  myJoinRequests: [],  // join requests the current user has made
+  allProfiles: [],     // all registered user profiles (for guest dropdown)
   data: {
     settings: { totalRooms: TOTAL_ROOMS_DEFAULT },
     reservations: [],
@@ -51,10 +55,20 @@ function isAdmin() {
 }
 
 function getDisplayName() {
-  if (state.profile?.full_name) return state.profile.full_name;
+  if (state.profile?.first_name) return state.profile.first_name;
+  if (state.profile?.full_name) return state.profile.full_name.split(" ")[0];
   if (state.profile?.email) return state.profile.email.split("@")[0];
   if (state.user?.email) return state.user.email.split("@")[0];
   return "Guest";
+}
+
+// Returns the best display name for any profile object
+function getProfileDisplayName(profile) {
+  if (!profile) return "Unknown";
+  if (profile.first_name) return profile.first_name;
+  if (profile.full_name) return profile.full_name.split(" ")[0];
+  if (profile.email) return profile.email.split("@")[0];
+  return "Unknown";
 }
 
 function getInitials(name) {
@@ -307,6 +321,7 @@ function renderSelectedDay() {
   reservations.forEach((reservation) => {
     const canEdit = canEditReservation(reservation);
     const selected = reservation.id === state.selectedReservationId;
+    const alreadyRequested = hasRequestedJoin(reservation.id);
 
     const li = document.createElement("li");
     li.className = `reservation-card${selected ? " is-selected" : ""}`;
@@ -314,7 +329,10 @@ function renderSelectedDay() {
 
     li.innerHTML = `
       <div class="reservation-row">
-        <strong>${reservation.name}</strong>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <strong>${reservation.name}</strong>
+          ${reservation.occasion ? `<span class="occasion-chip">${reservation.occasion}</span>` : ""}
+        </div>
         ${canEdit ? `<button type="button" class="ghost" data-action="edit" data-id="${reservation.id}" style="padding:5px 10px;font-size:.8rem">Edit</button>` : ""}
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -322,6 +340,8 @@ function renderSelectedDay() {
         <span style="font-size:.8rem;color:var(--muted)">${formatDate(parseISO(reservation.start_date))} → ${formatDate(parseISO(reservation.end_date))}</span>
       </div>
       ${reservation.guests ? `<div style="font-size:.8rem;color:var(--muted)">${reservation.guests}</div>` : ""}
+      ${!canEdit && state.user && !alreadyRequested ? `<div><button type="button" class="ghost request-join-btn" data-action="request-join" data-id="${reservation.id}">Request to join</button></div>` : ""}
+      ${!canEdit && state.user && alreadyRequested ? `<div style="font-size:.78rem;color:var(--muted)">✓ Join request sent</div>` : ""}
     `;
 
     list.appendChild(li);
@@ -375,6 +395,59 @@ function renderInvites() {
   });
 }
 
+// ── Join request helpers ──────────────────────────────────────
+function hasRequestedJoin(reservationId) {
+  return state.myJoinRequests.some((jr) => jr.reservation_id === reservationId);
+}
+
+function renderJoinRequests() {
+  const section = $("#join-requests-section");
+  const badge = $("#join-requests-badge");
+  const list = $("#join-requests-list");
+  if (!section || !list) return;
+
+  const selected = getSelectedReservation();
+  const isOwner = selected && state.user && selected.created_by === state.user.id;
+
+  if (!isOwner || state.joinRequests.length === 0) {
+    section.classList.add("is-hidden");
+    return;
+  }
+
+  section.classList.remove("is-hidden");
+  if (badge) {
+    badge.textContent = state.joinRequests.length;
+    badge.classList.remove("is-hidden");
+  }
+
+  list.innerHTML = "";
+  state.joinRequests.forEach((jr) => {
+    const li = document.createElement("li");
+    li.className = "invite-card";
+    li.innerHTML = `
+      <div>
+        <strong>${jr.requester_name}</strong> wants to join &mdash;
+        <span style="font-weight:600">${jr.rooms_needed} room${jr.rooms_needed !== 1 ? "s" : ""}</span>
+      </div>
+      ${jr.message ? `<div class="invite-meta">"${jr.message}"</div>` : ""}
+      <div class="invite-actions">
+        <button type="button" class="approve-btn"
+          data-action="approve-join-request"
+          data-id="${jr.id}"
+          data-requester-id="${jr.requester_id}"
+          data-requester-name="${jr.requester_name}"
+          data-rooms="${jr.rooms_needed}">Approve</button>
+        <button type="button" class="deny-btn"
+          data-action="deny-join-request"
+          data-id="${jr.id}"
+          data-requester-id="${jr.requester_id}"
+          data-requester-name="${jr.requester_name}">Deny</button>
+      </div>
+    `;
+    list.appendChild(li);
+  });
+}
+
 // ── Reservation guests render ────────────────────────────────
 function renderReservationGuests() {
   const label = $("#selected-reservation-label");
@@ -420,6 +493,74 @@ function renderReservationGuests() {
   form.querySelectorAll("input, button").forEach((el) => {
     el.disabled = !canEdit;
   });
+
+  // User dropdown section
+  const userGuestSection = $("#user-guest-section");
+  if (userGuestSection) {
+    userGuestSection.querySelectorAll("select, button").forEach((el) => {
+      el.disabled = !canEdit;
+    });
+  }
+  populateUserGuestDropdown(canEdit);
+}
+
+// ── User guest dropdown ───────────────────────────────────────
+function populateUserGuestDropdown(canEdit) {
+  const select = $("#user-guest-select");
+  if (!select) return;
+
+  // Keep the placeholder option; rebuild the rest
+  select.innerHTML = '<option value="">— choose a user —</option>';
+
+  if (!canEdit) return;
+
+  const alreadyAddedIds = new Set(
+    state.reservationGuests.filter((g) => g.user_id).map((g) => g.user_id)
+  );
+
+  const candidates = state.allProfiles.filter(
+    (p) => p.id !== state.user?.id && !alreadyAddedIds.has(p.id)
+  );
+
+  candidates.forEach((p) => {
+    const name = getProfileDisplayName(p);
+    const option = document.createElement("option");
+    option.value = p.id;
+    option.textContent = name;
+    select.appendChild(option);
+  });
+}
+
+async function handleAddUserGuest() {
+  if (!state.user || !state.selectedReservationId) return;
+  const reservation = getSelectedReservation();
+  if (!canEditReservation(reservation)) {
+    showMessage("#user-guest-message", "You can only manage guests on your own reservations.", true);
+    return;
+  }
+
+  const select = $("#user-guest-select");
+  const userId = select?.value;
+  if (!userId) {
+    showMessage("#user-guest-message", "Please select a user.", true);
+    return;
+  }
+
+  const profile = state.allProfiles.find((p) => p.id === userId);
+  const name = getProfileDisplayName(profile);
+
+  const { error } = await supabaseClient.from("reservation_guests").insert({
+    reservation_id: state.selectedReservationId,
+    name,
+    count: 1,
+    user_id: userId,
+    created_by: state.user.id,
+  });
+
+  if (error) { showMessage("#user-guest-message", error.message, true); return; }
+  if (select) select.value = "";
+  showMessage("#user-guest-message", `${name} added to guest list.`);
+  await loadReservationExtras();
 }
 
 // ── Reservation notes render ─────────────────────────────────
@@ -544,12 +685,14 @@ async function loadReservationExtras() {
   if (!state.user || !state.selectedReservationId) {
     state.reservationGuests = [];
     state.reservationNotes = [];
+    state.joinRequests = [];
     renderReservationGuests();
     renderReservationNotes();
+    renderJoinRequests();
     return;
   }
 
-  const [guestsRes, notesRes] = await Promise.all([
+  const [guestsRes, notesRes, jrRes] = await Promise.all([
     supabaseClient
       .from("reservation_guests")
       .select("*")
@@ -560,6 +703,12 @@ async function loadReservationExtras() {
       .select("*")
       .eq("reservation_id", state.selectedReservationId)
       .order("created_at", { ascending: false }),
+    supabaseClient
+      .from("join_requests")
+      .select("*")
+      .eq("reservation_id", state.selectedReservationId)
+      .eq("status", "pending")
+      .order("created_at", { ascending: true }),
   ]);
 
   if (guestsRes.error) showMessage("#guests-message", guestsRes.error.message, true);
@@ -568,8 +717,16 @@ async function loadReservationExtras() {
   state.reservationGuests = guestsRes.data || [];
   state.reservationNotes = notesRes.data || [];
 
+  // Enrich join requests with requester names from allProfiles
+  const rawJr = jrRes.data || [];
+  state.joinRequests = rawJr.map((jr) => {
+    const profile = state.allProfiles.find((p) => p.id === jr.requester_id);
+    return { ...jr, requester_name: getProfileDisplayName(profile) };
+  });
+
   renderReservationGuests();
   renderReservationNotes();
+  renderJoinRequests();
 }
 
 async function refreshInvites() {
@@ -656,11 +813,15 @@ async function refreshInvites() {
 async function refreshData() {
   if (!state.user) return;
 
-  const [settingsRes, resvRes, grocRes, todoRes] = await Promise.all([
+  const [settingsRes, resvRes, grocRes, todoRes, myJrRes] = await Promise.all([
     supabaseClient.from("settings").select("*").eq("id", 1).single(),
     supabaseClient.from("reservations").select("*").order("start_date", { ascending: true }),
     supabaseClient.from("groceries").select("*").order("created_at", { ascending: false }),
     supabaseClient.from("todos").select("*").order("created_at", { ascending: false }),
+    supabaseClient
+      .from("join_requests")
+      .select("reservation_id, status")
+      .eq("requester_id", state.user.id),
   ]);
 
   if (!settingsRes.error && settingsRes.data) {
@@ -672,6 +833,9 @@ async function refreshData() {
   state.data.reservations = resvRes.data || [];
   state.data.groceries = grocRes.data || [];
   state.data.todos = todoRes.data || [];
+  state.myJoinRequests = myJrRes.data || [];
+
+  await loadAllProfiles();
 
   buildCalendar();
   renderSelectedDay();
@@ -684,7 +848,7 @@ async function fetchProfile(user) {
   if (!user) return null;
   const { data } = await supabaseClient
     .from("profiles")
-    .select("id, email, role, full_name, push_subscription")
+    .select("id, email, role, full_name, first_name, push_subscription")
     .eq("id", user.id)
     .maybeSingle();
   return data || null;
@@ -693,11 +857,21 @@ async function fetchProfile(user) {
 async function ensureProfile(user) {
   if (!user) return;
   const fullName = user.user_metadata?.full_name || null;
+  const firstName = user.user_metadata?.first_name || null;
   await supabaseClient.from("profiles").upsert({
     id: user.id,
     email: user.email,
     ...(fullName ? { full_name: fullName } : {}),
+    ...(firstName ? { first_name: firstName } : {}),
   });
+}
+
+async function loadAllProfiles() {
+  if (!state.user) { state.allProfiles = []; return; }
+  const { data } = await supabaseClient
+    .from("profiles")
+    .select("id, full_name, first_name, email");
+  state.allProfiles = data || [];
 }
 
 // ── Add reservation ──────────────────────────────────────────
@@ -725,6 +899,7 @@ async function addReservation(event) {
     end_date: data.end,
     rooms,
     guests: (data.guests || "").trim() || null,
+    occasion: (data.occasion || "").trim() || null,
   };
 
   let reservationId = state.editingReservationId;
@@ -784,6 +959,31 @@ function buildInviteEmailHtml(senderName, startDate, endDate, message) {
       <p><strong>Dates:</strong> ${startDate} → ${endDate}</p>
       ${message ? `<p><strong>Message:</strong> "${message}"</p>` : ""}
       <p>Open the <a href="${window.location.origin}" style="color:#0f766e">SunEscape app</a> to accept and choose how many rooms you need.</p>
+    </div>
+  `;
+}
+
+function buildJoinRequestEmailHtml(requesterName, reservationName, startDate, endDate, rooms, message) {
+  return `
+    <div style="font-family:sans-serif;max-width:520px;margin:0 auto">
+      <h2 style="color:#0f766e">SunEscape — Join Request</h2>
+      <p><strong>${requesterName}</strong> wants to join your reservation <strong>${reservationName}</strong>.</p>
+      <p><strong>Dates:</strong> ${startDate} → ${endDate}</p>
+      <p><strong>Rooms needed:</strong> ${rooms}</p>
+      ${message ? `<p><strong>Message:</strong> "${message}"</p>` : ""}
+      <p>Open the <a href="${window.location.origin}" style="color:#0f766e">SunEscape app</a> to approve or deny this request.</p>
+    </div>
+  `;
+}
+
+function buildJoinResponseEmailHtml(ownerName, reservationName, startDate, endDate, status) {
+  const approved = status === "approved";
+  return `
+    <div style="font-family:sans-serif;max-width:520px;margin:0 auto">
+      <h2 style="color:#0f766e">SunEscape — Join Request ${approved ? "Approved 🎉" : "Update"}</h2>
+      <p>Your request to join <strong>${reservationName}</strong> (${startDate} → ${endDate}) has been <strong>${approved ? "approved!" : "declined."}</strong></p>
+      ${approved ? "<p>You've been added to the guest list. See you at SunEscape!</p>" : "<p>The owner wasn't able to accommodate your request at this time.</p>"}
+      <p>Open the <a href="${window.location.origin}" style="color:#0f766e">SunEscape app</a> for details.</p>
     </div>
   `;
 }
@@ -917,6 +1117,115 @@ function hideJoinModal() {
   $("#join-modal-form").reset();
   document.body.style.overflow = "";
   showMessage("#join-modal-message", "");
+}
+
+// ── Join-request modal ────────────────────────────────────────
+function showJoinRequestModal(reservation) {
+  pendingJoinRequestReservation = reservation;
+  const ownerProfile = state.allProfiles.find((p) => p.id === reservation.created_by);
+  const ownerName = getProfileDisplayName(ownerProfile);
+  const start = formatDate(parseISO(reservation.start_date));
+  const end = formatDate(parseISO(reservation.end_date));
+
+  const info = $("#join-request-modal-info");
+  if (info) {
+    info.innerHTML = `
+      <strong>${reservation.name}</strong>${reservation.occasion ? ` &mdash; <span class="occasion-chip">${reservation.occasion}</span>` : ""}
+      <br><span style="font-size:.85rem;color:var(--muted)">${start} → ${end} &middot; owned by ${ownerName}</span>
+    `;
+  }
+
+  const roomsInput = $("[name=rooms]", $("#join-request-modal-form"));
+  if (roomsInput) roomsInput.max = state.data.settings.totalRooms;
+
+  $("#join-request-modal").classList.remove("is-hidden");
+  document.body.style.overflow = "hidden";
+}
+
+function hideJoinRequestModal() {
+  pendingJoinRequestReservation = null;
+  $("#join-request-modal").classList.add("is-hidden");
+  $("#join-request-modal-form").reset();
+  document.body.style.overflow = "";
+  showMessage("#join-request-modal-message", "");
+}
+
+async function handleJoinRequestModalSubmit(event) {
+  event.preventDefault();
+  if (!state.user || !pendingJoinRequestReservation) return;
+
+  const reservation = pendingJoinRequestReservation;
+  const data = Object.fromEntries(new FormData(event.target));
+  const roomsNeeded = Math.max(1, Number(data.rooms) || 1);
+  const message = (data.message || "").trim() || null;
+
+  const { error } = await supabaseClient.from("join_requests").insert({
+    reservation_id: reservation.id,
+    requester_id: state.user.id,
+    rooms_needed: roomsNeeded,
+    message,
+  });
+
+  if (error) {
+    const msg = error.code === "23505"
+      ? "You already sent a request for this reservation."
+      : error.message;
+    showMessage("#join-request-modal-message", msg, true);
+    return;
+  }
+
+  // Email the reservation owner
+  const requesterName = getDisplayName();
+  sendEmailToUser(
+    reservation.created_by,
+    `${requesterName} wants to join your SunEscape reservation`,
+    buildJoinRequestEmailHtml(requesterName, reservation.name, reservation.start_date, reservation.end_date, roomsNeeded, message)
+  ).catch(() => {});
+
+  hideJoinRequestModal();
+  showMessage("#reservation-message", "Join request sent to the owner!");
+  await refreshData();
+}
+
+async function handleJoinRequestActions(event) {
+  const btn = event.target.closest("button");
+  if (!btn || !state.user) return;
+  const { action, id, requesterId, requesterName, rooms } = btn.dataset;
+  if (!action || !id) return;
+
+  const reservation = getSelectedReservation();
+
+  if (action === "approve-join-request") {
+    if (!reservation) return;
+    await supabaseClient.from("join_requests").update({ status: "approved" }).eq("id", id);
+    await supabaseClient.from("reservation_guests").insert({
+      reservation_id: state.selectedReservationId,
+      name: requesterName || "Guest",
+      count: Number(rooms) || 1,
+      user_id: requesterId,
+      created_by: state.user.id,
+    });
+    sendEmailToUser(
+      requesterId,
+      `Your request to join "${reservation.name}" was approved!`,
+      buildJoinResponseEmailHtml(getDisplayName(), reservation.name, reservation.start_date, reservation.end_date, "approved")
+    ).catch(() => {});
+    showMessage("#guests-message", `${requesterName} approved and added to guests.`);
+    await loadReservationExtras();
+    await refreshData();
+  }
+
+  if (action === "deny-join-request") {
+    await supabaseClient.from("join_requests").update({ status: "denied" }).eq("id", id);
+    if (reservation) {
+      sendEmailToUser(
+        requesterId,
+        `Update on your request to join "${reservation.name}"`,
+        buildJoinResponseEmailHtml(getDisplayName(), reservation.name, reservation.start_date, reservation.end_date, "denied")
+      ).catch(() => {});
+    }
+    await loadReservationExtras();
+  }
 }
 
 async function handleJoinModalSubmit(event) {
@@ -1071,6 +1380,17 @@ async function sendEmailNotificationsToAll(subject, html) {
   }
 }
 
+async function sendEmailToUser(targetUserId, subject, html) {
+  if (!supabaseClient) return;
+  try {
+    await supabaseClient.functions.invoke("send-email", {
+      body: { subject, html, targetUserId },
+    });
+  } catch {
+    // silently ignore — email is best-effort
+  }
+}
+
 // ── Auth actions ──────────────────────────────────────────────
 async function handleSignIn(event) {
   event.preventDefault();
@@ -1088,13 +1408,14 @@ async function handleSignUp(event) {
   event.preventDefault();
   if (!supabaseClient) return;
 
-  const name = $("#signup-name").value.trim();
+  const firstName = $("#signup-first-name").value.trim();
+  const lastName = $("#signup-last-name").value.trim();
   const email = $("#signup-email").value.trim();
   const password = $("#signup-password").value;
   const confirm = $("#signup-confirm-password").value;
 
-  if (!name || !email || !password) {
-    updateAuthStatus("Please fill in all fields.", true);
+  if (!firstName || !email || !password) {
+    updateAuthStatus("Please fill in all required fields.", true);
     return;
   }
   if (password !== confirm) {
@@ -1106,12 +1427,14 @@ async function handleSignUp(event) {
     return;
   }
 
+  const fullName = lastName ? `${firstName} ${lastName}` : firstName;
+
   updateAuthStatus("Creating account…");
   const { data, error } = await supabaseClient.auth.signUp({
     email,
     password,
     options: {
-      data: { full_name: name },
+      data: { full_name: fullName, first_name: firstName },
       emailRedirectTo: window.location.origin,
     },
   });
@@ -1172,6 +1495,9 @@ function clearSignedOutState() {
   state.reservationGuests = [];
   state.reservationNotes = [];
   state.invites = [];
+  state.joinRequests = [];
+  state.myJoinRequests = [];
+  state.allProfiles = [];
   state.data.reservations = [];
   state.data.groceries = [];
   state.data.todos = [];
@@ -1225,13 +1551,14 @@ function handlePanelTabs(event) {
 }
 
 async function handleReservationActions(event) {
-  const btn = event.target.closest("button[data-action='edit']");
-  if (btn) {
-    const id = btn.dataset.id;
+  const editBtn = event.target.closest("button[data-action='edit']");
+  if (editBtn) {
+    const id = editBtn.dataset.id;
     const reservation = state.data.reservations.find((r) => r.id === id);
     if (!reservation || !canEditReservation(reservation)) return;
     const form = $("#reservation-form");
     form.name.value = reservation.name;
+    form.occasion.value = reservation.occasion || "";
     form.start.value = reservation.start_date;
     form.end.value = reservation.end_date;
     form.rooms.value = reservation.rooms;
@@ -1239,6 +1566,14 @@ async function handleReservationActions(event) {
     setReservationFormMode(id);
     state.selectedReservationId = reservation.id;
     await loadReservationExtras();
+    return;
+  }
+
+  const reqBtn = event.target.closest("button[data-action='request-join']");
+  if (reqBtn) {
+    const id = reqBtn.dataset.id;
+    const reservation = state.data.reservations.find((r) => r.id === id);
+    if (reservation) showJoinRequestModal(reservation);
     return;
   }
 
@@ -1295,6 +1630,8 @@ async function handleInviteActions(event) {
 function handleModalActions(event) {
   const btn = event.target.closest("[data-action='close-modal']");
   if (btn) { hideJoinModal(); return; }
+  const reqBtn = event.target.closest("[data-action='close-join-request-modal']");
+  if (reqBtn) { hideJoinRequestModal(); return; }
 }
 
 // ── Init ──────────────────────────────────────────────────────
@@ -1364,9 +1701,19 @@ async function init() {
     buildCalendar();
   });
 
-  // Join modal
+  // Join-invite modal
   $("#join-modal").addEventListener("click", handleModalActions);
   $("#join-modal-form").addEventListener("submit", handleJoinModalSubmit);
+
+  // Join-request modal
+  $("#join-request-modal").addEventListener("click", handleModalActions);
+  $("#join-request-modal-form").addEventListener("submit", handleJoinRequestModalSubmit);
+
+  // Join-request approve / deny (owner actions)
+  $("#join-requests-list").addEventListener("click", handleJoinRequestActions);
+
+  // Add registered user to guest list
+  $("#add-user-guest-btn").addEventListener("click", handleAddUserGuest);
 
   // Auth state changes
   supabaseClient.auth.onAuthStateChange(async (_event, session) => {

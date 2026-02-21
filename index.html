@@ -35,7 +35,10 @@
 
         <!-- Sign-up form -->
         <form id="signup-form" class="auth-form is-hidden">
-          <input type="text" id="signup-name" placeholder="Full name" autocomplete="name" required />
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <input type="text" id="signup-first-name" placeholder="First name" autocomplete="given-name" required />
+            <input type="text" id="signup-last-name" placeholder="Last name" autocomplete="family-name" />
+          </div>
           <input type="email" id="signup-email" placeholder="Email" autocomplete="email" required />
           <input type="password" id="signup-password" placeholder="Password" autocomplete="new-password" required />
           <input type="password" id="signup-confirm-password" placeholder="Confirm password" autocomplete="new-password" required />
@@ -152,6 +155,12 @@
                       <ul id="day-reservations" class="reservation-list"></ul>
                     </div>
 
+                    <!-- Join requests (visible to reservation owner only) -->
+                    <div class="panel-section is-hidden" id="join-requests-section">
+                      <h3>Join Requests <span id="join-requests-badge" class="badge is-hidden"></span></h3>
+                      <ul id="join-requests-list" class="panel-list"></ul>
+                    </div>
+
                     <!-- Create reservation form -->
                     <div class="panel-section">
                       <h3>Create reservation</h3>
@@ -159,6 +168,10 @@
                         <label>
                           Your name / group name
                           <input name="name" placeholder="Alex &amp; friends" required />
+                        </label>
+                        <label>
+                          Occasion (optional)
+                          <input name="occasion" placeholder="Birthday, Thanksgiving, Anniversary…" />
                         </label>
                         <div class="form-row">
                           <label>
@@ -205,6 +218,23 @@
                       <h3>Guests</h3>
                       <div id="selected-reservation-label" class="panel-sub">Select a reservation in Details.</div>
                       <ul id="guests-list" class="panel-list"></ul>
+
+                      <!-- Add a registered user -->
+                      <div class="form" id="user-guest-section">
+                        <label>
+                          Add registered user
+                          <div style="display:flex;gap:8px;align-items:center">
+                            <select id="user-guest-select" style="flex:1">
+                              <option value="">— choose a user —</option>
+                            </select>
+                            <button type="button" id="add-user-guest-btn" class="primary" style="flex-shrink:0">Add</button>
+                          </div>
+                        </label>
+                        <div id="user-guest-message" class="form-message"></div>
+                      </div>
+
+                      <div class="guest-section-divider">or add a custom guest</div>
+
                       <form id="guest-form" class="form">
                         <div class="form-row">
                           <label>
@@ -330,6 +360,33 @@
           </div>
         </section>
       </main>
+    </div>
+
+    <!-- ── Join-Request Modal ────────────────────────────────────── -->
+    <div id="join-request-modal" class="modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="join-request-modal-title">
+      <div class="modal-overlay" data-action="close-join-request-modal"></div>
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="join-request-modal-title">Request to join</h3>
+          <button type="button" class="modal-close" data-action="close-join-request-modal" aria-label="Close">&#10005;</button>
+        </div>
+        <div id="join-request-modal-info" class="modal-info"></div>
+        <form id="join-request-modal-form" class="form">
+          <label>
+            Bedrooms your group will need
+            <input type="number" name="rooms" min="1" max="5" value="1" required />
+          </label>
+          <label>
+            Message to the owner (optional)
+            <input name="message" placeholder="We'll arrive Friday evening…" />
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="primary">Send request</button>
+            <button type="button" class="ghost" data-action="close-join-request-modal">Cancel</button>
+          </div>
+          <div id="join-request-modal-message" class="form-message"></div>
+        </form>
+      </div>
     </div>
 
     <!-- ── Join-Invite Modal ──────────────────────────────────── -->

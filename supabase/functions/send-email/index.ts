@@ -40,9 +40,9 @@ serve(async (req: Request) => {
       );
     }
 
-    const { subject, html, text, excludeUserId } = await req.json();
+    const { subject, html, text, excludeUserId, targetUserId } = await req.json();
 
-    // Fetch all user emails using service-role key (bypasses RLS)
+    // Fetch user emails using service-role key (bypasses RLS)
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
     let query = supabase
@@ -50,7 +50,10 @@ serve(async (req: Request) => {
       .select("email")
       .not("email", "is", null);
 
-    if (excludeUserId) {
+    if (targetUserId) {
+      // Send only to a specific user (e.g. join-request notifications)
+      query = query.eq("id", targetUserId);
+    } else if (excludeUserId) {
       query = query.neq("id", excludeUserId);
     }
 

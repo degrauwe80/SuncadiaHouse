@@ -300,6 +300,61 @@ create policy "Invite dismissals: select own" on public.invite_dismissals
 create policy "Invite dismissals: insert own" on public.invite_dismissals
   for insert to authenticated with check (user_id = auth.uid());
 
+-- ─── Schema Additions ────────────────────────────────────────
+
+-- first_name column on profiles (supports separate first/last name signup)
+alter table public.profiles add column if not exists first_name text;
+
+-- occasion column on reservations (optional title/event label)
+alter table public.reservations add column if not exists occasion text;
+
+-- user_id column on reservation_guests (links a guest to a registered profile)
+alter table public.reservation_guests add column if not exists user_id uuid references auth.users;
+
+-- Join requests: any user can ask to join any reservation; the owner approves or denies
+create table if not exists public.join_requests (
+  id             uuid primary key default gen_random_uuid(),
+  reservation_id uuid not null references public.reservations(id) on delete cascade,
+  requester_id   uuid not null references auth.users on delete cascade,
+  rooms_needed   int not null default 1,
+  message        text,
+  status         text not null default 'pending' check (status in ('pending', 'approved', 'denied')),
+  created_at     timestamptz not null default now(),
+  unique (reservation_id, requester_id)
+);
+
+alter table public.join_requests enable row level security;
+
+drop policy if exists "Join requests: select"              on public.join_requests;
+drop policy if exists "Join requests: insert own"          on public.join_requests;
+drop policy if exists "Join requests: update owner or admin" on public.join_requests;
+
+-- Requester can see their own; reservation owner and admin can see all for their reservation
+create policy "Join requests: select" on public.join_requests
+  for select to authenticated
+  using (
+    requester_id = auth.uid()
+    or exists (
+      select 1 from public.reservations r
+      where r.id = join_requests.reservation_id
+        and (r.created_by = auth.uid() or public.is_admin())
+    )
+  );
+
+create policy "Join requests: insert own" on public.join_requests
+  for insert to authenticated
+  with check (requester_id = auth.uid());
+
+create policy "Join requests: update owner or admin" on public.join_requests
+  for update to authenticated
+  using (
+    exists (
+      select 1 from public.reservations r
+      where r.id = join_requests.reservation_id
+        and (r.created_by = auth.uid() or public.is_admin())
+    )
+  );
+
 -- ─── Seed Data ───────────────────────────────────────────────
 
 -- Ensure settings row exists with 5 rooms (SunEscape has 5 bedrooms)
