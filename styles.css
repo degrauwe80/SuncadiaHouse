@@ -893,6 +893,80 @@ button, input, textarea, select {
 .bottom-nav-item.active { color: var(--primary); }
 .bottom-nav-icon { font-size: 1.3rem; line-height: 1; }
 
+/* ── Occasion chip ────────────────────────────────────────── */
+.occasion-chip {
+  display: inline-flex;
+  align-items: center;
+  background: #fef3c7;
+  border: 1px solid #fbbf24;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.73rem;
+  color: #92400e;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* ── Guest section divider ────────────────────────────────── */
+.guest-section-divider {
+  font-size: 0.78rem;
+  color: var(--muted);
+  text-align: center;
+  padding: 6px 0;
+  border-top: 1px solid var(--border);
+  margin: 2px 0;
+}
+
+/* ── Select focus (matches input focus) ───────────────────── */
+.form select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+  outline: none;
+}
+
+/* ── Join-request approve / deny buttons ──────────────────── */
+.approve-btn {
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 7px 14px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: background 0.15s ease;
+}
+.approve-btn:hover { background: var(--primary-dk); }
+
+.deny-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 7px 14px;
+  cursor: pointer;
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 0.875rem;
+}
+.deny-btn:hover {
+  background: var(--bg-hover);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+/* ── Request-to-join chip on reservation card ─────────────── */
+.request-join-btn {
+  font-size: 0.78rem;
+  padding: 4px 10px;
+  color: var(--primary);
+  border-color: rgba(15, 118, 110, 0.4);
+  background: var(--primary-lt);
+}
+.request-join-btn:hover {
+  background: rgba(15, 118, 110, 0.12);
+  border-color: var(--primary);
+}
+
 /* ── Utility ──────────────────────────────────────────────── */
 .is-hidden { display: none !important; }
 
