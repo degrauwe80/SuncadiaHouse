@@ -280,6 +280,10 @@ create policy "Invites: insert reservation owner or admin" on public.invites
   );
 
 -- ── Invite Responses ──
+drop policy if exists "Invite responses: select"     on public.invite_responses;
+drop policy if exists "Invite responses: insert own" on public.invite_responses;
+drop policy if exists "Invite responses: update own" on public.invite_responses;
+
 create policy "Invite responses: select" on public.invite_responses
   for select to authenticated using (true);
 
