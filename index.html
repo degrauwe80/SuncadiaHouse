@@ -3,17 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SunEscape Planner</title>
+    <meta name="theme-color" content="#0f766e" />
+    <title>SunEscape — Vacation House Planner</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+
+    <!-- ── Login Screen ─────────────────────────────────────── -->
     <section id="login-screen" class="login-screen">
       <div class="login-card">
         <div class="login-brand">
           <div class="logo">SE</div>
           <div>
             <h1>SunEscape</h1>
-            <p>Sign in to manage reservations.</p>
+            <p>Plan your perfect getaway together.</p>
           </div>
         </div>
 
@@ -22,84 +25,108 @@
           <button type="button" class="auth-tab" data-auth-view="signup">Create account</button>
         </div>
 
+        <!-- Sign-in form -->
         <form id="signin-form" class="auth-form">
-          <input type="email" id="signin-email" placeholder="Email" required />
-          <input type="password" id="signin-password" placeholder="Password" required />
+          <input type="email" id="signin-email" placeholder="Email" autocomplete="email" required />
+          <input type="password" id="signin-password" placeholder="Password" autocomplete="current-password" required />
           <button type="submit" class="primary">Sign in</button>
           <button type="button" id="forgot-toggle" class="link-button">Forgot password?</button>
         </form>
 
+        <!-- Sign-up form -->
         <form id="signup-form" class="auth-form is-hidden">
-          <input type="email" id="signup-email" placeholder="Email" required />
-          <input type="password" id="signup-password" placeholder="Password" required />
-          <input
-            type="password"
-            id="signup-confirm-password"
-            placeholder="Confirm password"
-            required
-          />
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+            <input type="text" id="signup-first-name" placeholder="First name" autocomplete="given-name" required />
+            <input type="text" id="signup-last-name" placeholder="Last name" autocomplete="family-name" />
+          </div>
+          <input type="email" id="signup-email" placeholder="Email" autocomplete="email" required />
+          <input type="password" id="signup-password" placeholder="Password" autocomplete="new-password" required />
+          <input type="password" id="signup-confirm-password" placeholder="Confirm password" autocomplete="new-password" required />
           <button type="submit" class="primary">Create account</button>
         </form>
 
+        <!-- Password reset request form -->
         <form id="reset-request-form" class="auth-form is-hidden">
-          <input type="email" id="reset-email" placeholder="Email for reset" required />
+          <p class="form-hint">Enter your email and we'll send you a reset link.</p>
+          <input type="email" id="reset-email" placeholder="Email" autocomplete="email" required />
           <button type="submit" class="primary">Send reset email</button>
+          <button type="button" id="back-to-signin" class="link-button">Back to sign in</button>
         </form>
 
         <div class="auth-status" id="auth-status">Not signed in</div>
       </div>
     </section>
 
+    <!-- ── App Shell ─────────────────────────────────────────── -->
     <div class="app is-hidden" id="app-shell">
+
+      <!-- Sidebar (desktop) / Top bar (mobile) -->
       <aside class="sidebar">
         <div class="brand">
           <div class="logo">SE</div>
           <div>
             <h1>SunEscape</h1>
-            <p>Shared vacation planning</p>
+            <p>5 bedrooms · Shared planning</p>
           </div>
         </div>
-        <nav class="nav">
-          <button class="nav-item active" data-page="calendar">Calendar</button>
-          <button class="nav-item" data-page="lists">Lists</button>
-          <button class="nav-item" data-page="settings">Settings</button>
+
+        <nav class="nav" id="main-nav">
+          <button class="nav-item active" data-page="calendar">
+            <span class="nav-icon">🏠</span>
+            <span>Calendar</span>
+          </button>
+          <button class="nav-item" data-page="lists">
+            <span class="nav-icon">📋</span>
+            <span>Lists</span>
+          </button>
+          <button class="nav-item" data-page="settings">
+            <span class="nav-icon">⚙️</span>
+            <span>Settings</span>
+          </button>
         </nav>
+
         <div class="sidebar-footer">
-          <div class="auth-card">
-            <button id="auth-signout" class="ghost is-hidden" type="button">Sign out</button>
-          </div>
-          <div class="tip">
-            <strong>Tip</strong>
-            <span>Click a reservation in Details to manage guests and notes.</span>
+          <div class="user-card">
+            <div class="user-avatar" id="user-avatar">?</div>
+            <div class="user-info">
+              <span class="user-name" id="user-name">Not signed in</span>
+              <button id="auth-signout" class="link-button is-hidden" type="button">Sign out</button>
+            </div>
           </div>
         </div>
       </aside>
 
+      <!-- Main content -->
       <main class="content">
         <div id="auth-banner" class="auth-banner is-hidden">
-          Please sign in to view and edit reservations.
+          Please sign in to view and manage reservations.
         </div>
+
+        <!-- ── Calendar Page ──────────────────────────────────── -->
         <section id="page-calendar" class="page active">
           <header class="page-header">
             <div>
               <h2>Reservations</h2>
-              <p>See availability, invite friends, and plan stays.</p>
+              <p>View availability and plan your stay at SunEscape.</p>
             </div>
             <div class="month-controls">
-              <button id="prev-month" class="ghost">Previous</button>
+              <button id="prev-month" class="ghost icon-btn" aria-label="Previous month">&#8249;</button>
               <div id="month-label" class="month-label"></div>
-              <button id="next-month" class="ghost">Next</button>
+              <button id="next-month" class="ghost icon-btn" aria-label="Next month">&#8250;</button>
             </div>
           </header>
 
           <div class="calendar-layout">
+            <!-- Calendar grid -->
             <div class="calendar-card">
               <div class="weekdays">
-                <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                <span>Mon</span><span>Tue</span><span>Wed</span>
+                <span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
               </div>
               <div id="calendar-grid" class="calendar-grid"></div>
             </div>
 
+            <!-- Side panel -->
             <div class="side-panel">
               <div class="panel-card detail-panel">
                 <div class="panel-header">
@@ -114,52 +141,68 @@
                 </div>
 
                 <div class="panel-content">
+                  <!-- Details tab -->
                   <div class="tab-panel is-active" id="panel-details">
-                    <div class="panel-section">
-                      <h3>Invites</h3>
+                    <!-- Invites section -->
+                    <div class="panel-section" id="invites-section">
+                      <h3>Invites <span id="invite-badge" class="badge is-hidden"></span></h3>
                       <ul id="invites-list" class="panel-list"></ul>
                     </div>
 
+                    <!-- Reservations list -->
                     <div class="panel-section">
                       <h3>Who's staying</h3>
                       <ul id="day-reservations" class="reservation-list"></ul>
                     </div>
 
+                    <!-- Join requests (visible to reservation owner only) -->
+                    <div class="panel-section is-hidden" id="join-requests-section">
+                      <h3>Join Requests <span id="join-requests-badge" class="badge is-hidden"></span></h3>
+                      <ul id="join-requests-list" class="panel-list"></ul>
+                    </div>
+
+                    <!-- Create reservation form -->
                     <div class="panel-section">
                       <h3>Create reservation</h3>
                       <form id="reservation-form" class="form">
                         <label>
-                          Primary name
-                          <input name="name" placeholder="Alex" required />
+                          Your name / group name
+                          <input name="name" placeholder="Alex &amp; friends" required />
+                        </label>
+                        <label>
+                          Occasion (optional)
+                          <input name="occasion" placeholder="Birthday, Thanksgiving, Anniversary…" />
                         </label>
                         <div class="form-row">
                           <label>
-                            Start date
+                            Check-in
                             <input type="date" name="start" required />
                           </label>
                           <label>
-                            End date
+                            Check-out
                             <input type="date" name="end" required />
                           </label>
                         </div>
                         <div class="form-row">
                           <label>
                             Rooms needed
-                            <input type="number" name="rooms" min="1" value="1" required />
+                            <input type="number" name="rooms" min="1" max="5" value="1" required />
                           </label>
                           <label>
-                            Invitees
-                            <input name="guests" placeholder="Jamie, Morgan" />
+                            Notes (optional)
+                            <input name="guests" placeholder="Arriving late, need parking…" />
                           </label>
                         </div>
                         <label class="inline-check">
-                          <input type="checkbox" name="broadcastInvite" />
-                          Invite others to join this stay
+                          <input type="checkbox" name="broadcastInvite" id="broadcast-invite-check" />
+                          <span>Notify others &amp; invite them to join</span>
                         </label>
-                        <label>
-                          Invite note (optional)
-                          <input name="inviteNote" placeholder="We still have room if anyone wants to join" />
-                        </label>
+                        <div id="invite-note-wrap" class="is-hidden">
+                          <label>
+                            Invite message (optional)
+                            <input name="inviteNote" placeholder="Come join us, plenty of room!" />
+                          </label>
+                        </div>
                         <div class="form-actions">
                           <button type="submit" class="primary" id="reservation-submit">Reserve stay</button>
                           <button type="button" class="ghost is-hidden" id="reservation-cancel">Cancel edit</button>
@@ -169,11 +212,29 @@
                     </div>
                   </div>
 
+                  <!-- Guests tab -->
                   <div class="tab-panel" id="panel-guests">
                     <div class="panel-section">
                       <h3>Guests</h3>
                       <div id="selected-reservation-label" class="panel-sub">Select a reservation in Details.</div>
                       <ul id="guests-list" class="panel-list"></ul>
+
+                      <!-- Add a registered user -->
+                      <div class="form" id="user-guest-section">
+                        <label>
+                          Add registered user
+                          <div style="display:flex;gap:8px;align-items:center">
+                            <select id="user-guest-select" style="flex:1">
+                              <option value="">— choose a user —</option>
+                            </select>
+                            <button type="button" id="add-user-guest-btn" class="primary" style="flex-shrink:0">Add</button>
+                          </div>
+                        </label>
+                        <div id="user-guest-message" class="form-message"></div>
+                      </div>
+
+                      <div class="guest-section-divider">or add a custom guest</div>
+
                       <form id="guest-form" class="form">
                         <div class="form-row">
                           <label>
@@ -191,6 +252,7 @@
                     </div>
                   </div>
 
+                  <!-- Notes tab -->
                   <div class="tab-panel" id="panel-notes">
                     <div class="panel-section">
                       <h3>Notes</h3>
@@ -198,7 +260,7 @@
                       <form id="note-form" class="form">
                         <label>
                           Add a note
-                          <textarea name="noteText" rows="4" placeholder="Parking info, arrival details, reminders..." required></textarea>
+                          <textarea name="noteText" rows="3" placeholder="Parking info, arrival details, reminders…" required></textarea>
                         </label>
                         <button type="submit" class="primary">Add note</button>
                         <div id="notes-message" class="form-message"></div>
@@ -212,36 +274,39 @@
           </div>
         </section>
 
+        <!-- ── Lists Page ─────────────────────────────────────── -->
         <section id="page-lists" class="page">
           <header class="page-header">
             <div>
-              <h2>Lists</h2>
-              <p>Groceries, supplies, and tasks with owners.</p>
+              <h2>Shared Lists</h2>
+              <p>Coordinate groceries and to-dos for the house.</p>
             </div>
           </header>
 
           <div class="lists-grid">
+            <!-- Grocery list -->
             <div class="panel-card">
               <div class="panel-header">
-                <h3>Groceries</h3>
-                <span class="panel-sub">Shared shopping list</span>
+                <h3>🛒 Groceries</h3>
+                <span class="panel-sub">What do we need?</span>
               </div>
               <form id="grocery-form" class="form inline-form">
                 <input name="item" placeholder="Fresh bread" required />
-                <input name="who" placeholder="Owner" />
+                <input name="who" placeholder="Who's bringing it?" />
                 <button type="submit" class="primary">Add</button>
               </form>
               <ul id="grocery-list" class="checklist"></ul>
             </div>
 
+            <!-- To-do list -->
             <div class="panel-card">
               <div class="panel-header">
-                <h3>To-Dos</h3>
-                <span class="panel-sub">Who is responsible</span>
+                <h3>✅ To-Dos</h3>
+                <span class="panel-sub">Tasks and responsibilities</span>
               </div>
               <form id="todo-form" class="form inline-form">
-                <input name="task" placeholder="Clean grill" required />
-                <input name="owner" placeholder="Owner" />
+                <input name="task" placeholder="Clean the grill" required />
+                <input name="owner" placeholder="Who's doing it?" />
                 <button type="submit" class="primary">Add</button>
               </form>
               <ul id="todo-list" class="checklist"></ul>
@@ -249,27 +314,119 @@
           </div>
         </section>
 
+        <!-- ── Settings Page ──────────────────────────────────── -->
         <section id="page-settings" class="page">
           <header class="page-header">
             <div>
               <h2>Settings</h2>
-              <p>Define how many rooms are available.</p>
+              <p>House configuration and notification preferences.</p>
             </div>
           </header>
 
-          <div class="panel-card settings-card">
-            <form id="settings-form" class="form">
-              <label>
-                Total rooms in the house
-                <input type="number" name="totalRooms" min="1" value="4" required />
-              </label>
-              <button type="submit" class="primary">Save settings</button>
-              <div id="settings-message" class="form-message"></div>
-            </form>
+          <div class="settings-grid">
+            <!-- House settings (admin only) -->
+            <div class="panel-card settings-card">
+              <div class="panel-header">
+                <h3>House settings</h3>
+                <span class="panel-sub">Admin only</span>
+              </div>
+              <form id="settings-form" class="form">
+                <label>
+                  Total bedrooms
+                  <input type="number" name="totalRooms" min="1" max="20" value="5" required />
+                </label>
+                <button type="submit" class="primary">Save settings</button>
+                <div id="settings-message" class="form-message"></div>
+              </form>
+            </div>
+
+            <!-- Push notifications -->
+            <div class="panel-card settings-card">
+              <div class="panel-header">
+                <h3>Push notifications</h3>
+                <span class="panel-sub">Get notified when someone creates a reservation or invite</span>
+              </div>
+              <div class="push-status-row">
+                <div id="push-status-text" class="panel-sub">Checking notification status…</div>
+                <button type="button" id="push-permission-btn" class="primary is-hidden">
+                  Enable notifications
+                </button>
+                <div class="push-badge is-hidden" id="push-enabled-badge">
+                  <span class="badge-dot"></span> Enabled
+                </div>
+              </div>
+              <div id="push-message" class="form-message"></div>
+            </div>
           </div>
         </section>
       </main>
     </div>
+
+    <!-- ── Join-Request Modal ────────────────────────────────────── -->
+    <div id="join-request-modal" class="modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="join-request-modal-title">
+      <div class="modal-overlay" data-action="close-join-request-modal"></div>
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="join-request-modal-title">Request to join</h3>
+          <button type="button" class="modal-close" data-action="close-join-request-modal" aria-label="Close">&#10005;</button>
+        </div>
+        <div id="join-request-modal-info" class="modal-info"></div>
+        <form id="join-request-modal-form" class="form">
+          <label>
+            Bedrooms your group will need
+            <input type="number" name="rooms" min="1" max="5" value="1" required />
+          </label>
+          <label>
+            Message to the owner (optional)
+            <input name="message" placeholder="We'll arrive Friday evening…" />
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="primary">Send request</button>
+            <button type="button" class="ghost" data-action="close-join-request-modal">Cancel</button>
+          </div>
+          <div id="join-request-modal-message" class="form-message"></div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── Join-Invite Modal ──────────────────────────────────── -->
+    <div id="join-modal" class="modal is-hidden" role="dialog" aria-modal="true" aria-labelledby="join-modal-title">
+      <div class="modal-overlay" data-action="close-modal"></div>
+      <div class="modal-card">
+        <div class="modal-header">
+          <h3 id="join-modal-title">Join this stay</h3>
+          <button type="button" class="modal-close" data-action="close-modal" aria-label="Close">&#10005;</button>
+        </div>
+        <div id="join-modal-info" class="modal-info"></div>
+        <form id="join-modal-form" class="form">
+          <label>
+            How many bedrooms will your group need?
+            <input type="number" name="rooms" min="1" max="5" value="1" required />
+          </label>
+          <div class="form-actions">
+            <button type="submit" class="primary">Confirm — I'm joining!</button>
+            <button type="button" class="ghost" data-action="close-modal">Cancel</button>
+          </div>
+          <div id="join-modal-message" class="form-message"></div>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── Mobile bottom nav ─────────────────────────────────── -->
+    <nav class="bottom-nav is-hidden" id="bottom-nav">
+      <button class="bottom-nav-item active" data-page="calendar">
+        <span class="bottom-nav-icon">🏠</span>
+        <span>Calendar</span>
+      </button>
+      <button class="bottom-nav-item" data-page="lists">
+        <span class="bottom-nav-icon">📋</span>
+        <span>Lists</span>
+      </button>
+      <button class="bottom-nav-item" data-page="settings">
+        <span class="bottom-nav-icon">⚙️</span>
+        <span>Settings</span>
+      </button>
+    </nav>
 
     <script src="config.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
