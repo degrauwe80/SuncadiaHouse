@@ -1041,7 +1041,7 @@ async function addGrocery(event) {
     completed: false,
     created_by: state.user.id,
   });
-  if (error) return;
+  if (error) { showMessage("#grocery-message", error.message, true); return; }
   event.target.reset();
   await refreshData();
 }
@@ -1056,7 +1056,7 @@ async function addTodo(event) {
     completed: false,
     created_by: state.user.id,
   });
-  if (error) return;
+  if (error) { showMessage("#todo-message", error.message, true); return; }
   event.target.reset();
   await refreshData();
 }
@@ -1400,8 +1400,24 @@ async function handleSignIn(event) {
   if (!email || !password) return;
 
   updateAuthStatus("Signing in…");
-  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-  if (error) updateAuthStatus(error.message, true);
+  const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if (error) {
+    updateAuthStatus(error.message, true);
+    return;
+  }
+
+  // Belt-and-suspenders: onAuthStateChange may not fire in non-incognito browsers
+  // when a stale session already exists in localStorage (Supabase v2 storage lock
+  // conflict). Explicitly bootstrap the UI here so the user is never left stuck
+  // on "Signing in…" after a successful network response.
+  if (data.session) {
+    state.user = data.session.user;
+    await ensureProfile(state.user);
+    state.profile = await fetchProfile(state.user);
+    setAuthUI(data.session);
+    await refreshData();
+    setFormsEnabled(true);
+  }
 }
 
 async function handleSignUp(event) {
@@ -1716,7 +1732,13 @@ async function init() {
   $("#add-user-guest-btn").addEventListener("click", handleAddUserGuest);
 
   // Auth state changes
-  supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+  supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    // INITIAL_SESSION fires synchronously when the listener is first registered.
+    // The getSession() call below already handles that case, so skipping here
+    // prevents ensureProfile/fetchProfile/refreshData from running twice on
+    // every page load.
+    if (event === "INITIAL_SESSION") return;
+
     state.user = session?.user || null;
 
     if (state.user) {
