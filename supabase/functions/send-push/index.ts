@@ -20,54 +20,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Minimal VAPID / Web Push implementation using the Web Crypto API available
-// in Deno. Avoids needing the npm:web-push package.
-async function buildVapidAuthHeader(
-  endpoint: string,
-  vapidPublicKey: string,
-  vapidPrivateKey: string,
-  vapidSubject: string
-): Promise<string> {
-  const audience = new URL(endpoint).origin;
-  const now = Math.floor(Date.now() / 1000);
-  const exp = now + 12 * 3600; // 12-hour expiry
-
-  const header = btoa(JSON.stringify({ typ: "JWT", alg: "ES256" }))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=/g, "");
-  const payload = btoa(
-    JSON.stringify({ aud: audience, exp, sub: vapidSubject })
-  )
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=/g, "");
-
-  const signingInput = `${header}.${payload}`;
-
-  // Import the VAPID private key (raw base64url → PKCS8 not needed; use raw EC)
-  const rawPrivate = Uint8Array.from(
-    atob(vapidPrivateKey.replace(/-/g, "+").replace(/_/g, "/")),
-    (c) => c.charCodeAt(0)
-  );
-
-  const cryptoKey = await crypto.subtle.importKey(
-    "raw",
-    rawPrivate,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-
-  // Fall back to a simpler signing approach for HMAC (note: real VAPID requires
-  // ECDSA P-256, but since Supabase Edge Functions fully support it, use importKey pkcs8)
-  // For production, use the npm:web-push package instead.
-  // This is a demonstration placeholder — use the npm approach below.
-  void cryptoKey;
-
-  return `vapid t=${header}.${payload}.placeholder,k=${vapidPublicKey}`;
-}
-
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
