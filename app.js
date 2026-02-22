@@ -1638,7 +1638,6 @@ function handleModalActions(event) {
 async function init() {
   // Clear stale Supabase auth locks
   Object.keys(localStorage).filter(k => k.includes("lock")).forEach(k => localStorage.removeItem(k));
-  logSupabaseConfigDebug();
   supabaseClient = initSupabase();
   if (!supabaseClient) return;
 
