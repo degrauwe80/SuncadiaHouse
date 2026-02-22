@@ -858,12 +858,13 @@ async function ensureProfile(user) {
   if (!user) return;
   const fullName = user.user_metadata?.full_name || null;
   const firstName = user.user_metadata?.first_name || null;
-  await supabaseClient.from("profiles").upsert({
+  const { error } = await supabaseClient.from("profiles").upsert({
     id: user.id,
     email: user.email,
     ...(fullName ? { full_name: fullName } : {}),
     ...(firstName ? { first_name: firstName } : {}),
   });
+  if (error) throw error;
 }
 
 async function loadAllProfiles() {
@@ -1412,7 +1413,12 @@ async function handleSignIn(event) {
   // on "Signing in…" after a successful network response.
   if (data.session) {
     state.user = data.session.user;
-    await ensureProfile(state.user);
+    try {
+      await ensureProfile(state.user);
+    } catch (e) {
+      updateAuthStatus("Profile setup failed: " + e.message, true);
+      return;
+    }
     state.profile = await fetchProfile(state.user);
     setAuthUI(data.session);
     await refreshData();
@@ -1466,7 +1472,21 @@ async function handleSignUp(event) {
   }
 
   if (data.session) {
+    // Directly bootstrap the UI rather than relying solely on onAuthStateChange,
+    // for the same reason as handleSignIn: a storage-lock conflict can prevent
+    // the event from firing in non-incognito browsers.
+    state.user = data.session.user;
+    try {
+      await ensureProfile(state.user);
+    } catch (e) {
+      updateAuthStatus("Profile setup failed: " + e.message, true);
+      return;
+    }
+    state.profile = await fetchProfile(state.user);
     updateAuthStatus("Account created. Welcome to SunEscape!");
+    setAuthUI(data.session);
+    await refreshData();
+    setFormsEnabled(true);
   } else {
     updateAuthStatus("Check your email to confirm your account, then sign in.");
     setAuthView("signin");
@@ -1742,7 +1762,12 @@ async function init() {
     state.user = session?.user || null;
 
     if (state.user) {
-      await ensureProfile(state.user);
+      try {
+        await ensureProfile(state.user);
+      } catch (e) {
+        updateAuthStatus("Profile setup failed: " + e.message, true);
+        return;
+      }
       state.profile = await fetchProfile(state.user);
       setAuthUI(session);
       await refreshData();
@@ -1766,7 +1791,11 @@ async function init() {
   state.user = data.session?.user || null;
 
   if (state.user) {
-    await ensureProfile(state.user);
+    try {
+      await ensureProfile(state.user);
+    } catch (e) {
+      updateAuthStatus("Profile setup failed: " + e.message, true);
+    }
     state.profile = await fetchProfile(state.user);
   }
 
