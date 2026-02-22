@@ -522,6 +522,17 @@ function populateUserGuestDropdown(canEdit) {
     (p) => p.id !== state.user?.id && !alreadyAddedIds.has(p.id)
   );
 
+  if (candidates.length === 0) {
+    const opt = document.createElement("option");
+    opt.disabled = true;
+    opt.textContent =
+      state.allProfiles.length <= 1
+        ? "No other users have registered yet"
+        : "All registered users already added";
+    select.appendChild(opt);
+    return;
+  }
+
   candidates.forEach((p) => {
     const name = getProfileDisplayName(p);
     const option = document.createElement("option");
@@ -835,7 +846,15 @@ async function refreshData() {
   state.data.todos = todoRes.data || [];
   state.myJoinRequests = myJrRes.data || [];
 
-  await loadAllProfiles();
+  try {
+    await loadAllProfiles();
+  } catch (e) {
+    // Non-fatal: log and continue. Most likely cause is an RLS policy that
+    // restricts each user to only their own profile row ("select own" instead
+    // of "select authenticated"). Re-run the schema SQL in Supabase to fix.
+    console.warn("loadAllProfiles failed:", e.message);
+    state.allProfiles = [];
+  }
 
   buildCalendar();
   renderSelectedDay();
@@ -869,9 +888,11 @@ async function ensureProfile(user) {
 
 async function loadAllProfiles() {
   if (!state.user) { state.allProfiles = []; return; }
-  const { data } = await supabaseClient
+  const { data, error } = await supabaseClient
     .from("profiles")
-    .select("id, full_name, first_name, email");
+    .select("id, full_name, first_name, email")
+    .order("full_name", { ascending: true, nullsFirst: false });
+  if (error) throw error;
   state.allProfiles = data || [];
 }
 
