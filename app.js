@@ -1071,6 +1071,8 @@ function clearSignedOutState() {
 }
 
 async function init() {
+  // Clear stale Supabase auth locks
+  Object.keys(localStorage).filter(k => k.includes("supabase") || k.includes("sb-")).forEach(k => localStorage.removeItem(k));
   logSupabaseConfigDebug();
   supabaseClient = initSupabase();
   if (!supabaseClient) return;
