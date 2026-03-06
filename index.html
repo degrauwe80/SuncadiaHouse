@@ -200,7 +200,8 @@
                         <div id="invite-note-wrap" class="is-hidden">
                           <label>
                             Invite message (optional)
-                            <input name="inviteNote" placeholder="Come join us, plenty of room!" />
+                            <input name="inviteNote" placeholder="Come join us, plenty of room!" maxlength="200" aria-describedby="invite-note-hint" />
+                            <span id="invite-note-hint" class="form-hint">Maximum 200 characters.</span>
                           </label>
                         </div>
                         <div class="form-actions">

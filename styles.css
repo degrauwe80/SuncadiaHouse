@@ -968,6 +968,20 @@ button, input, textarea, select {
 /* ── Utility ──────────────────────────────────────────────── */
 .is-hidden { display: none !important; }
 
+/* ── Disabled state ───────────────────────────────────────── */
+input:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: var(--bg-subtle);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* ── Animations ───────────────────────────────────────────── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
