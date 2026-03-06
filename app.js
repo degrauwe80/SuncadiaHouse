@@ -1804,4 +1804,30 @@ async function init() {
   }
 }
 
-init();
+// ── Exports (CommonJS / test environments only) ───────────────
+/* istanbul ignore next */
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = {
+    state,
+    get supabaseClient() { return supabaseClient; },
+    set supabaseClient(v) { supabaseClient = v; },
+    // Date helpers
+    toISO, parseISO, formatDate,
+    // Name helpers
+    getInitials, getDisplayName, getProfileDisplayName,
+    // Business logic
+    overlaps, roomsUsedOn, reservationsOn,
+    isAdmin, canEditReservation, getSelectedReservation, hasRequestedJoin,
+    // Render / UI
+    buildCalendar, renderSelectedDay, renderGroceries, renderTodos,
+    renderInvites, renderReservationGuests, renderReservationNotes,
+    renderJoinRequests, setAuthView, setAuthUI, navigateTo, setPanelTab,
+    setReservationFormMode, clearSignedOutState,
+    // Modals
+    showJoinModal, hideJoinModal, showJoinRequestModal, hideJoinRequestModal,
+    // Form handlers
+    addReservation, addGuest, addNote, addGrocery, addTodo,
+  };
+} else {
+  init();
+}
