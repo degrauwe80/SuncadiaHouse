@@ -315,6 +315,8 @@ function renderSelectedDay() {
   const hasActive = reservations.some((r) => r.id === state.selectedReservationId);
   if (!hasActive) {
     state.selectedReservationId = reservations[0].id;
+    state.reservationGuests = [];
+    state.reservationNotes = [];
     loadReservationExtras();
   }
 
@@ -606,7 +608,7 @@ function renderReservationNotes() {
     });
   }
 
-  form.querySelectorAll("textarea, button").forEach((el) => {
+  form.querySelectorAll("input, textarea, button, select").forEach((el) => {
     el.disabled = !canEdit;
   });
 }
@@ -797,6 +799,12 @@ async function refreshInvites() {
   state.invites = pending.map((inv) => {
     const resv = resvById[inv.reservation_id] || {};
     const creator = profileById[inv.created_by] || {};
+    if (!resvById[inv.reservation_id]) {
+      console.warn(`Invite ${inv.id}: reservation ${inv.reservation_id} not found — may have been deleted.`);
+    }
+    if (!profileById[inv.created_by]) {
+      console.warn(`Invite ${inv.id}: creator profile ${inv.created_by} not found.`);
+    }
     return {
       ...inv,
       start_date: resv.start_date,
@@ -1005,6 +1013,7 @@ async function addGuest(event) {
     created_by: state.user.id,
   });
   if (error) { showMessage("#guests-message", error.message, true); return; }
+  showMessage("#guests-message", "Guest added!");
   event.target.reset();
   event.target.guestCount.value = "1";
   await loadReservationExtras();
@@ -1026,6 +1035,7 @@ async function addNote(event) {
     created_by: state.user.id,
   });
   if (error) { showMessage("#notes-message", error.message, true); return; }
+  showMessage("#notes-message", "Note added!");
   event.target.reset();
   await loadReservationExtras();
 }
@@ -1042,6 +1052,7 @@ async function addGrocery(event) {
     created_by: state.user.id,
   });
   if (error) { showMessage("#grocery-message", error.message, true); return; }
+  showMessage("#grocery-message", "Item added!");
   event.target.reset();
   await refreshData();
 }
@@ -1057,6 +1068,7 @@ async function addTodo(event) {
     created_by: state.user.id,
   });
   if (error) { showMessage("#todo-message", error.message, true); return; }
+  showMessage("#todo-message", "Task added!");
   event.target.reset();
   await refreshData();
 }
@@ -1635,10 +1647,14 @@ async function handleInviteActions(event) {
   }
 
   if (action === "decline-invite") {
-    await supabaseClient.from("invite_responses").upsert(
+    const { error } = await supabaseClient.from("invite_responses").upsert(
       { invite_id: id, user_id: state.user.id, status: "declined", rooms_count: 0 },
       { onConflict: "invite_id,user_id" }
     );
+    if (error && !(error.code === "23505" || (error.message && error.message.toLowerCase().includes("duplicate key")))) {
+      console.error("Failed to decline invite:", error.message);
+      return;
+    }
     await refreshInvites();
   }
 }
